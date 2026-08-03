@@ -4,6 +4,8 @@ import { RotaProtegida } from './auth/RotaProtegida'
 import { Login } from './pages/Login'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { AdminCadastrarPV } from './pages/AdminCadastrarPV'
+import { AdminColaboradores } from './pages/AdminColaboradores'
+import { AdminRelatorios } from './pages/AdminRelatorios'
 import { FuncionarioTarefas } from './pages/FuncionarioTarefas'
 
 export function App() {
@@ -21,10 +23,26 @@ export function App() {
             }
           />
           <Route
-            path="/admin/nova-pv"
+            path="/admin/nova-requisicao"
             element={
               <RotaProtegida role="admin">
                 <AdminCadastrarPV />
+              </RotaProtegida>
+            }
+          />
+          <Route
+            path="/admin/colaboradores"
+            element={
+              <RotaProtegida role="admin">
+                <AdminColaboradores />
+              </RotaProtegida>
+            }
+          />
+          <Route
+            path="/admin/relatorios"
+            element={
+              <RotaProtegida role="admin">
+                <AdminRelatorios />
               </RotaProtegida>
             }
           />

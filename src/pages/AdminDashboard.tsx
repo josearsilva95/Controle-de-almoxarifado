@@ -7,10 +7,11 @@ import { usePedidoSessoes } from '../hooks/usePedidoSessoes'
 import { UrgenciaBadge } from '../components/UrgenciaBadge'
 import { StatusBadge } from '../components/StatusBadge'
 import { SessoesTimeline } from '../components/SessoesTimeline'
+import { AppShell } from '../components/AppShell'
 import { formatDataHora } from '../lib/tempo'
 
 export function AdminDashboard() {
-  const { profile, logout } = useAuth()
+  const { profile } = useAuth()
   const { pedidos, carregando } = usePedidos()
   const perfis = usePerfis()
   const [pedidoExpandido, setPedidoExpandido] = useState<string | null>(null)
@@ -24,74 +25,68 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <h1>Controle de Movimentação — Painel Admin</h1>
-        <div className="topbar-info">
-          <span>{profile.nome_completo}</span>
-          <button className="secundario" onClick={logout}>
-            Sair
-          </button>
-        </div>
-      </header>
+    <AppShell>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-foreground">Requisições</h2>
+        <Link
+          to="/admin/nova-requisicao"
+          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+        >
+          + Nova Requisição
+        </Link>
+      </div>
 
-      <main className="conteudo">
-        <div className="barra-acoes">
-          <h2 style={{ margin: 0 }}>Pedidos</h2>
-          <Link to="/admin/nova-pv">
-            <button>+ Cadastrar PV</button>
-          </Link>
-        </div>
+      {carregando && <p className="py-8 text-center text-sm text-muted-foreground">Carregando requisições...</p>}
+      {!carregando && pedidos.length === 0 && (
+        <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma requisição cadastrada ainda.</p>
+      )}
 
-        {carregando && <p className="mensagem-vazio">Carregando pedidos...</p>}
-        {!carregando && pedidos.length === 0 && (
-          <p className="mensagem-vazio">Nenhuma PV cadastrada ainda.</p>
-        )}
-
-        {!carregando && pedidos.length > 0 && (
-          <table className="tabela-pedidos">
+      {!carregando && pedidos.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <table className="w-full border-collapse text-sm">
             <thead>
-              <tr>
-                <th>PV</th>
-                <th>Cliente</th>
-                <th>Urgência</th>
-                <th>Status</th>
-                <th>Cadastrado em</th>
-                <th>Iniciado em / por</th>
-                <th>Finalizado em / por</th>
+              <tr className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2.5">Requisição</th>
+                <th className="px-3 py-2.5">Cliente</th>
+                <th className="px-3 py-2.5">Urgência</th>
+                <th className="px-3 py-2.5">Status</th>
+                <th className="px-3 py-2.5">Cadastrada em</th>
+                <th className="px-3 py-2.5">Iniciada em / por</th>
+                <th className="px-3 py-2.5">Finalizada em / por</th>
               </tr>
             </thead>
             <tbody>
               {pedidos.map((pedido) => (
                 <Fragment key={pedido.id}>
                   <tr
+                    className="cursor-pointer border-t border-border hover:bg-muted/40"
                     onClick={() =>
                       setPedidoExpandido(pedidoExpandido === pedido.id ? null : pedido.id)
                     }
                   >
-                    <td>{pedido.numero_pv}</td>
-                    <td>{pedido.cliente}</td>
-                    <td>
+                    <td className="px-3 py-2.5 font-medium text-card-foreground">#{pedido.numero_pv}</td>
+                    <td className="px-3 py-2.5 text-card-foreground">{pedido.cliente}</td>
+                    <td className="px-3 py-2.5">
                       <UrgenciaBadge urgencia={pedido.urgencia} />
                     </td>
-                    <td>
+                    <td className="px-3 py-2.5">
                       <StatusBadge pedido={pedido} />
                     </td>
-                    <td>{formatDataHora(pedido.created_at)}</td>
-                    <td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{formatDataHora(pedido.created_at)}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
                       {pedido.iniciado_em
                         ? `${formatDataHora(pedido.iniciado_em)} · ${nomeDe(pedido.iniciado_por)}`
                         : '—'}
                     </td>
-                    <td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
                       {pedido.finalizado_em
                         ? `${formatDataHora(pedido.finalizado_em)} · ${nomeDe(pedido.finalizado_por)}`
                         : '—'}
                     </td>
                   </tr>
                   {pedidoExpandido === pedido.id && (
-                    <tr className="linha-detalhes">
-                      <td colSpan={7}>
+                    <tr className="border-t border-border bg-muted/20">
+                      <td colSpan={7} className="px-4 py-3">
                         <SessoesTimeline sessoes={sessoes} perfis={perfis} />
                       </td>
                     </tr>
@@ -100,8 +95,8 @@ export function AdminDashboard() {
               ))}
             </tbody>
           </table>
-        )}
-      </main>
-    </div>
+        </div>
+      )}
+    </AppShell>
   )
 }

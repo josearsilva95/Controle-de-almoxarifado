@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react'
 import { corDoStatus } from '../lib/cores'
 import { formatDataHora } from '../lib/tempo'
 import { StatusBadge } from './StatusBadge'
@@ -21,6 +20,11 @@ function nomeDe(perfis: Record<string, Profile>, id: string | null): string {
   return perfis[id]?.nome_completo ?? 'Desconhecido'
 }
 
+const botaoPrimario =
+  'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50'
+const botaoSecundario =
+  'rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-card-foreground transition-colors hover:bg-muted disabled:opacity-50'
+
 export function PedidoCard({
   pedido,
   perfis,
@@ -34,20 +38,23 @@ export function PedidoCard({
   const souEuQueEstouTrabalhando = pedido.funcionario_atual === usuarioAtualId
 
   return (
-    <div className="cartao-pedido" style={{ '--cor-status': corDoStatus(pedido) } as CSSProperties}>
-      <div className="cartao-pedido-cabecalho">
-        <span className="cartao-pedido-pv">PV {pedido.numero_pv}</span>
+    <div
+      className="rounded-xl border border-border bg-card p-5"
+      style={{ borderLeft: `6px solid ${corDoStatus(pedido)}` }}
+    >
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <span className="text-lg font-bold text-card-foreground">Requisição #{pedido.numero_pv}</span>
         <StatusBadge pedido={pedido} />
       </div>
-      <div className="cartao-pedido-cliente">{pedido.cliente}</div>
-      <div style={{ marginBottom: 10 }}>
+      <div className="mb-2.5 text-sm text-muted-foreground">{pedido.cliente}</div>
+      <div className="mb-3">
         <UrgenciaBadge urgencia={pedido.urgencia} />
       </div>
-      <div className="cartao-pedido-meta">
-        <div>Cadastrado em: {formatDataHora(pedido.created_at)}</div>
+      <div className="mb-3 space-y-0.5 text-xs text-muted-foreground">
+        <div>Cadastrada em: {formatDataHora(pedido.created_at)}</div>
         {pedido.iniciado_em && (
           <div>
-            Iniciado em: {formatDataHora(pedido.iniciado_em)} por {nomeDe(perfis, pedido.iniciado_por)}
+            Iniciada em: {formatDataHora(pedido.iniciado_em)} por {nomeDe(perfis, pedido.iniciado_por)}
           </div>
         )}
         {pedido.status === 'em_andamento' && (
@@ -55,34 +62,34 @@ export function PedidoCard({
         )}
         {pedido.status === 'finalizado' && pedido.finalizado_em && (
           <div>
-            Finalizado em: {formatDataHora(pedido.finalizado_em)} por{' '}
+            Finalizada em: {formatDataHora(pedido.finalizado_em)} por{' '}
             {nomeDe(perfis, pedido.finalizado_por)}
           </div>
         )}
       </div>
-      <div className="botoes-acao">
+      <div className="flex flex-wrap items-center gap-2">
         {pedido.status === 'pendente' && (
-          <button onClick={() => onIniciar(pedido)} disabled={processando}>
+          <button className={botaoPrimario} onClick={() => onIniciar(pedido)} disabled={processando}>
             Iniciar
           </button>
         )}
         {pedido.status === 'em_andamento' && souEuQueEstouTrabalhando && (
           <>
-            <button className="secundario" onClick={() => onPausar(pedido)} disabled={processando}>
+            <button className={botaoSecundario} onClick={() => onPausar(pedido)} disabled={processando}>
               Pausar
             </button>
-            <button onClick={() => onFinalizar(pedido)} disabled={processando}>
+            <button className={botaoPrimario} onClick={() => onFinalizar(pedido)} disabled={processando}>
               Finalizar
             </button>
           </>
         )}
         {pedido.status === 'em_andamento' && !souEuQueEstouTrabalhando && (
-          <span className="mensagem-vazio" style={{ padding: 0 }}>
-            Já está sendo separado por outro funcionário
+          <span className="text-sm text-muted-foreground">
+            Já está sendo separada por outro funcionário
           </span>
         )}
         {pedido.status === 'pausado' && (
-          <button onClick={() => onContinuar(pedido)} disabled={processando}>
+          <button className={botaoPrimario} onClick={() => onContinuar(pedido)} disabled={processando}>
             Continuar
           </button>
         )}
