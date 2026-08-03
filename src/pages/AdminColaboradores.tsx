@@ -1,11 +1,14 @@
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
 import { BarraProgresso } from '../components/ui/BarraProgresso'
+import { usePedidos } from '../hooks/usePedidos'
 import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
 import { formatDuracao } from '../lib/tempo'
 
 export function AdminColaboradores() {
-  const { desempenho, carregando } = useDesempenhoColaboradores()
+  const { pedidos, carregando: carregandoPedidos } = usePedidos()
+  const { desempenho, carregando: carregandoDesempenho } = useDesempenhoColaboradores(pedidos)
+  const carregando = carregandoPedidos || carregandoDesempenho
   const maiorTotal = Math.max(1, ...desempenho.map((d) => d.requisicoesFinalizadas))
 
   return (

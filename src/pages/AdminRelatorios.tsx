@@ -20,7 +20,7 @@ function mesmoMes(iso: string, agora: Date): boolean {
 
 export function AdminRelatorios() {
   const { pedidos, carregando } = usePedidos()
-  const { desempenho } = useDesempenhoColaboradores()
+  const { desempenho } = useDesempenhoColaboradores(pedidos)
 
   const stats = useMemo(() => {
     const agora = new Date()

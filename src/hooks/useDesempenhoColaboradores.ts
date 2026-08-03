@@ -1,9 +1,8 @@
 import { useMemo } from 'react'
-import { usePedidos } from './usePedidos'
 import { usePerfis } from './usePerfis'
 import { useTodasSessoes } from './useTodasSessoes'
 import { tempoPorUsuario } from '../lib/tempo'
-import type { Role } from '../types/database'
+import type { Pedido, Role } from '../types/database'
 
 export interface DesempenhoColaborador {
   usuarioId: string
@@ -19,8 +18,14 @@ function mesmoMes(iso: string, agora: Date): boolean {
   return data.getFullYear() === agora.getFullYear() && data.getMonth() === agora.getMonth()
 }
 
-export function useDesempenhoColaboradores() {
-  const { pedidos, carregando: carregandoPedidos } = usePedidos()
+/**
+ * Recebe `pedidos` de fora (em vez de buscar com usePedidos() aqui dentro) para evitar que duas
+ * instâncias do hook usePedidos() na mesma página disputem o mesmo canal Realtime
+ * ("pedidos-changes") — a segunda tentativa de registrar listeners depois que a primeira já
+ * chamou subscribe() derruba a árvore React inteira (o Supabase reusa o canal por nome e lança
+ * erro ao adicionar callbacks pós-subscribe).
+ */
+export function useDesempenhoColaboradores(pedidos: Pedido[]) {
   const { sessoes, carregando: carregandoSessoes } = useTodasSessoes()
   const perfis = usePerfis()
 
@@ -44,5 +49,5 @@ export function useDesempenhoColaboradores() {
       .sort((a, b) => b.requisicoesFinalizadas - a.requisicoesFinalizadas)
   }, [pedidos, sessoes, perfis])
 
-  return { desempenho, carregando: carregandoPedidos || carregandoSessoes }
+  return { desempenho, carregando: carregandoSessoes }
 }
