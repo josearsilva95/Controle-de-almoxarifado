@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { CheckCircle2, Clock, ClipboardList, Calendar } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
 import { BarraProgresso } from '../components/ui/BarraProgresso'
@@ -74,10 +75,10 @@ export function AdminRelatorios() {
       <h2 className="mb-4 text-lg font-semibold text-foreground">Relatórios</h2>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Total de requisições" valor={String(stats.totalGeral)} />
-        <KpiCard label="Requisições no mês" valor={String(stats.totalMes)} />
-        <KpiCard label="Finalizadas no mês" valor={String(stats.finalizadasMes)} />
-        <KpiCard label="Tempo médio de separação" valor={formatDuracao(stats.tempoMedioSegundos)} />
+        <KpiCard label="Total de requisições" valor={String(stats.totalGeral)} icone={ClipboardList} />
+        <KpiCard label="Requisições no mês" valor={String(stats.totalMes)} icone={Calendar} />
+        <KpiCard label="Finalizadas no mês" valor={String(stats.finalizadasMes)} icone={CheckCircle2} />
+        <KpiCard label="Tempo médio de separação" valor={formatDuracao(stats.tempoMedioSegundos)} icone={Clock} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

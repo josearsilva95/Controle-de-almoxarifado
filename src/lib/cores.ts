@@ -1,4 +1,4 @@
-import type { Pedido } from '../types/database'
+import type { Pedido, Role } from '../types/database'
 
 export const CORES = {
   urgente: '#e53935',
@@ -39,4 +39,15 @@ export function rotuloStatus(status: Pedido['status']): string {
     case 'finalizado':
       return 'Finalizado'
   }
+}
+
+export function rotuloRole(role: Role): string {
+  return role === 'admin' ? 'Administrador' : 'Almoxarife'
+}
+
+export function iniciaisDoNome(nome: string): string {
+  const partes = nome.trim().split(/\s+/)
+  const primeira = partes[0]?.[0] ?? ''
+  const ultima = partes.length > 1 ? partes[partes.length - 1][0] : ''
+  return (primeira + ultima).toUpperCase()
 }

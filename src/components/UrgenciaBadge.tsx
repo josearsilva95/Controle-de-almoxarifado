@@ -6,9 +6,9 @@ export function UrgenciaBadge({ urgencia }: { urgencia: Urgencia }) {
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-        clara ? 'border border-border text-foreground' : 'text-white'
+        clara ? 'border border-border text-foreground' : ''
       }`}
-      style={{ backgroundColor: CORES[urgencia] }}
+      style={clara ? undefined : { backgroundColor: `${CORES[urgencia]}1f`, color: CORES[urgencia] }}
     >
       {rotuloUrgencia(urgencia)}
     </span>

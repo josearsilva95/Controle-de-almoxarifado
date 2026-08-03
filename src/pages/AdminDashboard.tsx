@@ -1,5 +1,4 @@
 import { Fragment, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { usePedidos } from '../hooks/usePedidos'
 import { usePerfis } from '../hooks/usePerfis'
@@ -26,15 +25,7 @@ export function AdminDashboard() {
 
   return (
     <AppShell>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Requisições</h2>
-        <Link
-          to="/admin/nova-requisicao"
-          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
-        >
-          + Nova Requisição
-        </Link>
-      </div>
+      <h2 className="mb-4 text-lg font-semibold text-foreground">Requisições</h2>
 
       {carregando && <p className="py-8 text-center text-sm text-muted-foreground">Carregando requisições...</p>}
       {!carregando && pedidos.length === 0 && (
