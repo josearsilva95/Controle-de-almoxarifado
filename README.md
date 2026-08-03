@@ -16,12 +16,13 @@ Sistema de controle de separação de pedidos (PVs) do almoxarifado. Admin cadas
 A tela **Colaboradores → Novo Colaborador** cria contas direto pelo app, sem precisar do Supabase Studio. Isso exige publicar uma Edge Function que usa a chave secreta (`service_role`) do lado do servidor do Supabase — essa chave nunca vai para o navegador.
 
 1. No painel do Supabase, vá em **Edge Functions** (menu lateral) → **Deploy a new function** → **Via Editor**.
-2. Nomeie a função `criar-usuario`.
-3. Cole o conteúdo de [`supabase/functions/criar-usuario/index.ts`](supabase/functions/criar-usuario/index.ts) no editor, substituindo o template.
+2. Dê um nome à função (o nome definido na criação vira a slug/URL definitiva e não muda depois — o app espera **`rapid-worker`**, a menos que você ajuste o nome usado em [`src/pages/AdminNovoColaborador.tsx`](src/pages/AdminNovoColaborador.tsx) para bater com o nome que você escolher).
+3. Cole o conteúdo de [`supabase/functions/rapid-worker/index.ts`](supabase/functions/rapid-worker/index.ts) no editor, substituindo o template.
 4. Clique em **Deploy function**. As variáveis `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` já ficam disponíveis automaticamente para a função — não precisa configurar nada extra.
-5. Pronto — a tela **Colaboradores → Novo Colaborador** do app já vai funcionar, chamando essa função (`supabase.functions.invoke('criar-usuario', ...)`), que verifica se quem chamou é admin antes de criar a conta.
+5. Na aba **Settings** da função, desligue **"Verify JWT with legacy secret"** e clique em **Save changes** — a função já faz sua própria checagem de admin no código, então essa verificação extra da plataforma só atrapalha o CORS (causa o erro "Failed to send a request to the Edge Function" no navegador).
+6. Pronto — a tela **Colaboradores → Novo Colaborador** do app já vai funcionar, chamando essa função (`supabase.functions.invoke('rapid-worker', ...)`), que verifica se quem chamou é admin antes de criar a conta.
 
-Alternativa via CLI (`supabase functions deploy criar-usuario`), se preferir: requer instalar o [Supabase CLI](https://supabase.com/docs/guides/cli), rodar `supabase login`, `supabase link --project-ref SEU_PROJECT_REF` e então o deploy.
+Alternativa via CLI (`supabase functions deploy rapid-worker`), se preferir: requer instalar o [Supabase CLI](https://supabase.com/docs/guides/cli), rodar `supabase login`, `supabase link --project-ref SEU_PROJECT_REF` e então o deploy.
 
 ## Rodando localmente
 

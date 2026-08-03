@@ -1,4 +1,4 @@
-// Edge Function: criar-usuario
+// Edge Function: rapid-worker (cria colaboradores)
 // Cria um usuário no Supabase Auth + a linha correspondente em `profiles`.
 // Só pode ser chamada por um usuário autenticado com role = 'admin'.
 // Usa a service_role key (disponível automaticamente como variável de ambiente

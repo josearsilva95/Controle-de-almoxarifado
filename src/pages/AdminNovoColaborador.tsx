@@ -29,7 +29,7 @@ export function AdminNovoColaborador() {
     setSucesso(null)
     setEnviando(true)
 
-    const { data, error } = await supabase.functions.invoke('criar-usuario', {
+    const { data, error } = await supabase.functions.invoke('rapid-worker', {
       body: { email: email.trim(), senha, nome_completo: nomeCompleto.trim(), role },
     })
 
