@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
 import { BarraProgresso } from '../components/ui/BarraProgresso'
@@ -13,7 +14,15 @@ export function AdminColaboradores() {
 
   return (
     <AppShell>
-      <h2 className="mb-4 text-lg font-semibold text-foreground">Colaboradores</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-foreground">Colaboradores</h2>
+        <Link
+          to="/admin/novo-colaborador"
+          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+        >
+          + Novo Colaborador
+        </Link>
+      </div>
 
       {carregando && <p className="py-8 text-center text-sm text-muted-foreground">Carregando colaboradores...</p>}
       {!carregando && desempenho.length === 0 && (

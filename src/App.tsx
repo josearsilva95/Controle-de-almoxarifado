@@ -6,6 +6,7 @@ import { Login } from './pages/Login'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { AdminCadastrarPV } from './pages/AdminCadastrarPV'
 import { AdminColaboradores } from './pages/AdminColaboradores'
+import { AdminNovoColaborador } from './pages/AdminNovoColaborador'
 import { AdminRelatorios } from './pages/AdminRelatorios'
 import { FuncionarioTarefas } from './pages/FuncionarioTarefas'
 
@@ -37,6 +38,14 @@ export function App() {
               element={
                 <RotaProtegida role="admin">
                   <AdminColaboradores />
+                </RotaProtegida>
+              }
+            />
+            <Route
+              path="/admin/novo-colaborador"
+              element={
+                <RotaProtegida role="admin">
+                  <AdminNovoColaborador />
                 </RotaProtegida>
               }
             />
