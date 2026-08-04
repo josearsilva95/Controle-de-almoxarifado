@@ -85,6 +85,14 @@ Deno.serve(async (req) => {
       return jsonResponse({ erro: 'A senha precisa ter pelo menos 6 caracteres.' }, 400)
     }
 
+    console.log('Diagnóstico env:', {
+      temSupabaseUrl: Boolean(supabaseUrl),
+      supabaseUrl,
+      temAnonKey: Boolean(anonKey),
+      temServiceRoleKey: Boolean(serviceRoleKey),
+      tamanhoServiceRoleKey: serviceRoleKey?.length ?? 0,
+    })
+
     // Cliente com a service_role key, com permissão total (ignora RLS) — só usado
     // a partir daqui, depois de já termos confirmado que quem chamou é admin.
     const admin = createClient(supabaseUrl, serviceRoleKey)
@@ -96,7 +104,16 @@ Deno.serve(async (req) => {
     })
 
     if (erroCriacao || !novoUsuario.user) {
-      console.error('Erro ao criar usuário no Auth:', JSON.stringify(erroCriacao))
+      console.error(
+        'Erro ao criar usuário no Auth:',
+        JSON.stringify(erroCriacao),
+        'stack:',
+        erroCriacao instanceof Error ? erroCriacao.stack : 'sem stack',
+        'cause:',
+        erroCriacao && typeof erroCriacao === 'object' && 'cause' in erroCriacao
+          ? String((erroCriacao as { cause?: unknown }).cause)
+          : 'sem cause'
+      )
       return jsonResponse(
         { erro: mensagemDeErro(erroCriacao, 'Não foi possível criar o usuário. Verifique o e-mail informado.') },
         400
