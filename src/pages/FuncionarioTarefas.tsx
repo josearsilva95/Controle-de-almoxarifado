@@ -1,20 +1,22 @@
 import { useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { usePedidos } from '../hooks/usePedidos'
+import { usePedidosContext } from '../hooks/usePedidosContext'
 import { usePerfis } from '../hooks/usePerfis'
 import { PedidoCard } from '../components/PedidoCard'
 import { AppShell } from '../components/AppShell'
+import { PausarModal } from '../components/PausarModal'
 import { assumirPedido, finalizarPedido, pausarPedido } from '../lib/acoesPedido'
-import type { Pedido, Urgencia } from '../types/database'
+import type { MotivoPausa, Pedido, Urgencia } from '../types/database'
 
 const RANK_URGENCIA: Record<Urgencia, number> = { urgente: 0, medio: 1, nao_urgente: 2 }
 
 export function FuncionarioTarefas() {
   const { profile } = useAuth()
-  const { pedidos, carregando } = usePedidos()
+  const { pedidos, carregando } = usePedidosContext()
   const perfis = usePerfis()
   const [emProcessamento, setEmProcessamento] = useState<Set<string>>(new Set())
   const [mensagemErro, setMensagemErro] = useState<string | null>(null)
+  const [pedidoPausando, setPedidoPausando] = useState<Pedido | null>(null)
 
   const pedidosVisiveis = useMemo(() => {
     return pedidos
@@ -38,6 +40,13 @@ export function FuncionarioTarefas() {
       return novo
     })
     if (erro) setMensagemErro(erro)
+  }
+
+  async function confirmarPausa(motivo: MotivoPausa) {
+    if (!pedidoPausando) return
+    const pedido = pedidoPausando
+    await executarAcao(pedido, (p, usuarioId) => pausarPedido(p, usuarioId, motivo))
+    setPedidoPausando(null)
   }
 
   return (
@@ -65,11 +74,20 @@ export function FuncionarioTarefas() {
               processando={emProcessamento.has(pedido.id)}
               onIniciar={(p) => executarAcao(p, assumirPedido)}
               onContinuar={(p) => executarAcao(p, assumirPedido)}
-              onPausar={(p) => executarAcao(p, pausarPedido)}
+              onPausar={(p) => setPedidoPausando(p)}
               onFinalizar={(p) => executarAcao(p, finalizarPedido)}
             />
           ))}
         </div>
+      )}
+
+      {pedidoPausando && (
+        <PausarModal
+          pedido={pedidoPausando}
+          onFechar={() => setPedidoPausando(null)}
+          onEscolher={confirmarPausa}
+          processando={emProcessamento.has(pedidoPausando.id)}
+        />
       )}
     </AppShell>
   )

@@ -11,6 +11,7 @@ create table public.profiles (
   nome_completo text not null,
   email text,
   role text not null default 'funcionario' check (role in ('admin', 'funcionario')),
+  deposito text check (deposito in ('deposito_1', 'deposito_2', 'deposito_3')),
   created_at timestamptz not null default now()
 );
 
@@ -18,8 +19,11 @@ create table public.pedidos (
   id uuid primary key default gen_random_uuid(),
   numero_pv text not null,
   cliente text not null,
+  quantidade_itens integer not null,
   urgencia text not null check (urgencia in ('urgente', 'medio', 'nao_urgente')),
   status text not null default 'pendente' check (status in ('pendente', 'em_andamento', 'pausado', 'finalizado')),
+  deposito text not null check (deposito in ('deposito_1', 'deposito_2', 'deposito_3')),
+  motivo_pausa text check (motivo_pausa in ('falta_estoque', 'empilhadeira', 'equipamento_quebrado')),
   criado_por uuid not null references public.profiles (id),
   created_at timestamptz not null default now(),
   iniciado_em timestamptz,
@@ -37,7 +41,8 @@ create table public.pedido_sessoes (
   inicio timestamptz not null default now(),
   fim timestamptz,
   duracao_segundos int,
-  encerrada_por_evento text check (encerrada_por_evento in ('pausa', 'finalizacao'))
+  encerrada_por_evento text check (encerrada_por_evento in ('pausa', 'finalizacao')),
+  motivo_pausa text check (motivo_pausa in ('falta_estoque', 'empilhadeira', 'equipamento_quebrado'))
 );
 
 -- Garante que só existe UMA sessão aberta (fim is null) por pedido a qualquer momento.
@@ -102,11 +107,14 @@ create policy profiles_select_autenticados
   to authenticated
   using (true);
 
--- pedidos: leitura liberada a todo autenticado.
-create policy pedidos_select_autenticados
+-- pedidos: admin lê tudo; funcionário só lê requisições do próprio depósito.
+create policy pedidos_select_por_deposito
   on public.pedidos for select
   to authenticated
-  using (true);
+  using (
+    public.is_admin()
+    or deposito = (select deposito from public.profiles where id = auth.uid())
+  );
 
 -- pedidos: só admin cria PVs.
 create policy pedidos_insert_admin
@@ -172,5 +180,7 @@ alter publication supabase_realtime add table public.pedido_sessoes;
 -- 2. Table Editor -> profiles -> Insert row (ou INSERT via SQL Editor): para cada
 --    usuário criado no passo 1, inserir uma linha com o mesmo id (uuid do usuário
 --    em Authentication -> Users), um username (apelido interno, só exibido na UI),
---    nome_completo e role ('admin' ou 'funcionario').
+--    nome_completo, role ('admin' ou 'funcionario') e, se for funcionário, o
+--    deposito ('deposito_1'/'deposito_2'/'deposito_3') — ele só vê as requisições
+--    do próprio depósito. Admin não precisa de depósito (fica null).
 -- ============================================================

@@ -4,7 +4,7 @@ import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
 import { KpiCard } from '../components/ui/KpiCard'
 import { GraficoBarrasHorizontais } from '../components/ui/GraficoBarrasHorizontais'
-import { usePedidos } from '../hooks/usePedidos'
+import { usePedidosContext } from '../hooks/usePedidosContext'
 import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
 import { CORES, rotuloUrgencia } from '../lib/cores'
 import { formatDuracao } from '../lib/tempo'
@@ -27,7 +27,7 @@ function mesmoMes(iso: string, agora: Date): boolean {
 }
 
 export function AdminRelatorios() {
-  const { pedidos, carregando } = usePedidos()
+  const { pedidos, carregando } = usePedidosContext()
   const { desempenho } = useDesempenhoColaboradores(pedidos)
 
   const stats = useMemo(() => {

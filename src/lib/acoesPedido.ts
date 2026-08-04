@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import type { Pedido } from '../types/database'
+import type { MotivoPausa, Pedido } from '../types/database'
 
 type Resultado = { erro: string | null }
 
@@ -28,6 +28,7 @@ export async function assumirPedido(pedido: Pedido, usuarioId: string): Promise<
   const atualizacoes: Record<string, unknown> = {
     status: 'em_andamento',
     funcionario_atual: usuarioId,
+    motivo_pausa: null,
   }
   if (!pedido.iniciado_em) {
     atualizacoes.iniciado_em = agora
@@ -42,7 +43,8 @@ export async function assumirPedido(pedido: Pedido, usuarioId: string): Promise<
 async function encerrarSessaoAberta(
   pedidoId: string,
   usuarioId: string,
-  evento: 'pausa' | 'finalizacao'
+  evento: 'pausa' | 'finalizacao',
+  motivoPausa: MotivoPausa | null
 ): Promise<Resultado> {
   const { data: sessao, error: erroBusca } = await supabase
     .from('pedido_sessoes')
@@ -61,27 +63,36 @@ async function encerrarSessaoAberta(
 
   const { error } = await supabase
     .from('pedido_sessoes')
-    .update({ fim: agora.toISOString(), duracao_segundos: duracaoSegundos, encerrada_por_evento: evento })
+    .update({
+      fim: agora.toISOString(),
+      duracao_segundos: duracaoSegundos,
+      encerrada_por_evento: evento,
+      motivo_pausa: motivoPausa,
+    })
     .eq('id', sessao.id)
 
   if (error) return { erro: `Não foi possível encerrar a sessão: ${error.message}` }
   return { erro: null }
 }
 
-export async function pausarPedido(pedido: Pedido, usuarioId: string): Promise<Resultado> {
-  const { erro } = await encerrarSessaoAberta(pedido.id, usuarioId, 'pausa')
+export async function pausarPedido(
+  pedido: Pedido,
+  usuarioId: string,
+  motivo: MotivoPausa
+): Promise<Resultado> {
+  const { erro } = await encerrarSessaoAberta(pedido.id, usuarioId, 'pausa', motivo)
   if (erro) return { erro }
 
   const { error } = await supabase
     .from('pedidos')
-    .update({ status: 'pausado', funcionario_atual: null })
+    .update({ status: 'pausado', funcionario_atual: null, motivo_pausa: motivo })
     .eq('id', pedido.id)
   if (error) return { erro: `Não foi possível pausar: ${error.message}` }
   return { erro: null }
 }
 
 export async function finalizarPedido(pedido: Pedido, usuarioId: string): Promise<Resultado> {
-  const { erro } = await encerrarSessaoAberta(pedido.id, usuarioId, 'finalizacao')
+  const { erro } = await encerrarSessaoAberta(pedido.id, usuarioId, 'finalizacao', null)
   if (erro) return { erro }
 
   const { error } = await supabase
@@ -91,6 +102,7 @@ export async function finalizarPedido(pedido: Pedido, usuarioId: string): Promis
       finalizado_em: new Date().toISOString(),
       finalizado_por: usuarioId,
       funcionario_atual: null,
+      motivo_pausa: null,
     })
     .eq('id', pedido.id)
   if (error) return { erro: `Não foi possível finalizar: ${error.message}` }

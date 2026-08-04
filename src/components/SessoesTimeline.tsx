@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { formatDataHora, formatDuracao, tempoPorUsuario, duracaoSessao } from '../lib/tempo'
+import { rotuloMotivoPausa } from '../lib/motivosPausa'
 import type { PedidoSessao, Profile } from '../types/database'
 
 interface SessoesTimelineProps {
@@ -33,6 +34,7 @@ export function SessoesTimeline({ sessoes, perfis }: SessoesTimelineProps) {
             <li key={sessao.id} className="py-1.5 text-card-foreground">
               <strong>{nome}</strong> · {formatDataHora(sessao.inicio)} →{' '}
               {sessao.fim ? formatDataHora(sessao.fim) : 'em andamento'} · {formatDuracao(duracao)}
+              {sessao.motivo_pausa && ` · Pausada por: ${rotuloMotivoPausa(sessao.motivo_pausa)}`}
             </li>
           )
         })}

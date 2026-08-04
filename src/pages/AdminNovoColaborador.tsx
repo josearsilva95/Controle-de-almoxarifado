@@ -5,7 +5,8 @@ import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
-import type { Role } from '../types/database'
+import { DEPOSITOS, rotuloDeposito } from '../lib/depositos'
+import type { Deposito, Role } from '../types/database'
 
 const OPCOES_ROLE: Role[] = ['funcionario', 'admin']
 
@@ -39,6 +40,7 @@ export function AdminNovoColaborador() {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [role, setRole] = useState<Role>('funcionario')
+  const [deposito, setDeposito] = useState<Deposito>('deposito_1')
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState<{ email: string; senha: string } | null>(null)
@@ -50,7 +52,13 @@ export function AdminNovoColaborador() {
     setEnviando(true)
 
     const { data, error } = await supabase.functions.invoke('rapid-worker', {
-      body: { email: email.trim(), senha, nome_completo: nomeCompleto.trim(), role },
+      body: {
+        email: email.trim(),
+        senha,
+        nome_completo: nomeCompleto.trim(),
+        role,
+        deposito: role === 'funcionario' ? deposito : null,
+      },
     })
 
     setEnviando(false)
@@ -69,6 +77,7 @@ export function AdminNovoColaborador() {
     setEmail('')
     setSenha('')
     setRole('funcionario')
+    setDeposito('deposito_1')
   }
 
   return (
@@ -148,6 +157,26 @@ export function AdminNovoColaborador() {
               ))}
             </div>
           </div>
+
+          {role === 'funcionario' && (
+            <div className="mb-4">
+              <span className="mb-1 block text-sm font-medium text-card-foreground">Depósito</span>
+              <div className="flex gap-2">
+                {DEPOSITOS.map((opcao) => (
+                  <button
+                    key={opcao}
+                    type="button"
+                    className={`flex-1 rounded-md border-2 px-2 py-2.5 text-center text-xs font-semibold text-foreground transition-colors ${
+                      deposito === opcao ? 'border-primary bg-primary/10' : 'border-border'
+                    }`}
+                    onClick={() => setDeposito(opcao)}
+                  >
+                    {rotuloDeposito(opcao)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {erro && <p className="mb-3.5 text-sm text-destructive">{erro}</p>}
           {sucesso && (

@@ -19,6 +19,7 @@ function jsonResponse(body: unknown, status: number): Response {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const DEPOSITOS = ['deposito_1', 'deposito_2', 'deposito_3']
 
 /**
  * Extrai uma mensagem de erro utilizável, com fallback — alguns erros do SDK do
@@ -77,6 +78,8 @@ Deno.serve(async (req) => {
     const senha = String(body.senha ?? '')
     const nomeCompleto = String(body.nome_completo ?? '').trim()
     const role = body.role === 'admin' ? 'admin' : 'funcionario'
+    // Admin não precisa de depósito; funcionário precisa de um dos valores válidos.
+    const deposito = role === 'admin' ? null : String(body.deposito ?? '')
 
     if (!email || !nomeCompleto) {
       return jsonResponse({ erro: 'Preencha e-mail e nome completo.' }, 400)
@@ -89,6 +92,9 @@ Deno.serve(async (req) => {
     }
     if (senha && senha.length < 6) {
       return jsonResponse({ erro: 'A senha precisa ter pelo menos 6 caracteres.' }, 400)
+    }
+    if (role === 'funcionario' && !DEPOSITOS.includes(deposito ?? '')) {
+      return jsonResponse({ erro: 'Selecione um depósito para o funcionário.' }, 400)
     }
 
     if (!serviceRoleKey) {
@@ -138,7 +144,7 @@ Deno.serve(async (req) => {
 
       const { error: erroPerfil } = await admin
         .from('profiles')
-        .update({ nome_completo: nomeCompleto, email, role })
+        .update({ nome_completo: nomeCompleto, email, role, deposito })
         .eq('id', userId)
 
       if (erroPerfil) {
@@ -209,6 +215,7 @@ Deno.serve(async (req) => {
       nome_completo: nomeCompleto,
       email,
       role,
+      deposito,
     })
 
     if (erroPerfil) {

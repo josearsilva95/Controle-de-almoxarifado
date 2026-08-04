@@ -3,7 +3,8 @@ import type { FormEvent } from 'react'
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { Modal } from './ui/Modal'
 import { supabase } from '../lib/supabaseClient'
-import type { Profile, Role } from '../types/database'
+import { DEPOSITOS, rotuloDeposito } from '../lib/depositos'
+import type { Deposito, Profile, Role } from '../types/database'
 
 const OPCOES_ROLE: Role[] = ['funcionario', 'admin']
 
@@ -31,6 +32,7 @@ export function EditarColaboradorModal({ colaborador, onFechar, onSalvo }: Edita
   const [email, setEmail] = useState(colaborador.email ?? '')
   const [senha, setSenha] = useState('')
   const [role, setRole] = useState<Role>(colaborador.role)
+  const [deposito, setDeposito] = useState<Deposito>(colaborador.deposito ?? 'deposito_1')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
@@ -46,6 +48,7 @@ export function EditarColaboradorModal({ colaborador, onFechar, onSalvo }: Edita
         senha: senha || undefined,
         nome_completo: nomeCompleto.trim(),
         role,
+        deposito: role === 'funcionario' ? deposito : null,
       },
     })
 
@@ -120,6 +123,26 @@ export function EditarColaboradorModal({ colaborador, onFechar, onSalvo }: Edita
             ))}
           </div>
         </div>
+
+        {role === 'funcionario' && (
+          <div className="mb-4">
+            <span className="mb-1 block text-sm font-medium text-card-foreground">Depósito</span>
+            <div className="flex gap-2">
+              {DEPOSITOS.map((opcao) => (
+                <button
+                  key={opcao}
+                  type="button"
+                  className={`flex-1 rounded-md border-2 px-2 py-2.5 text-center text-xs font-semibold text-foreground transition-colors ${
+                    deposito === opcao ? 'border-primary bg-primary/10' : 'border-border'
+                  }`}
+                  onClick={() => setDeposito(opcao)}
+                >
+                  {rotuloDeposito(opcao)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {erro && <p className="mb-3.5 text-sm text-destructive">{erro}</p>}
 

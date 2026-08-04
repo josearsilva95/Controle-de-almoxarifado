@@ -5,14 +5,15 @@ import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
 import { BarraProgresso } from '../components/ui/BarraProgresso'
 import { EditarColaboradorModal } from '../components/EditarColaboradorModal'
-import { usePedidos } from '../hooks/usePedidos'
+import { usePedidosContext } from '../hooks/usePedidosContext'
 import { usePerfis } from '../hooks/usePerfis'
 import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
 import { formatDuracao } from '../lib/tempo'
+import { rotuloDeposito } from '../lib/depositos'
 import type { Profile } from '../types/database'
 
 export function AdminColaboradores() {
-  const { pedidos, carregando: carregandoPedidos } = usePedidos()
+  const { pedidos, carregando: carregandoPedidos } = usePedidosContext()
   const perfis = usePerfis()
   const { desempenho, carregando: carregandoDesempenho } = useDesempenhoColaboradores(pedidos)
   const [colaboradorEditando, setColaboradorEditando] = useState<Profile | null>(null)
@@ -50,6 +51,11 @@ export function AdminColaboradores() {
                   <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
                     {colaborador.role === 'admin' ? 'Admin' : 'Funcionário'}
                   </span>
+                  {colaborador.role === 'funcionario' && (
+                    <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                      {rotuloDeposito(perfis[colaborador.usuarioId]?.deposito ?? null)}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {colaborador.role === 'funcionario' && (

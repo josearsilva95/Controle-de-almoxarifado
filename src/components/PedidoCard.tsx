@@ -1,5 +1,7 @@
 import { corDoStatus } from '../lib/cores'
 import { formatDataHora } from '../lib/tempo'
+import { rotuloDeposito } from '../lib/depositos'
+import { rotuloMotivoPausa } from '../lib/motivosPausa'
 import { StatusBadge } from './StatusBadge'
 import { UrgenciaBadge } from './UrgenciaBadge'
 import type { Pedido, Profile } from '../types/database'
@@ -51,6 +53,10 @@ export function PedidoCard({
         <UrgenciaBadge urgencia={pedido.urgencia} />
       </div>
       <div className="mb-3 space-y-0.5 text-xs text-muted-foreground">
+        <div>
+          {rotuloDeposito(pedido.deposito)} · {pedido.quantidade_itens}{' '}
+          {pedido.quantidade_itens === 1 ? 'item' : 'itens'}
+        </div>
         <div>Cadastrada em: {formatDataHora(pedido.created_at)}</div>
         {pedido.iniciado_em && (
           <div>
@@ -59,6 +65,9 @@ export function PedidoCard({
         )}
         {pedido.status === 'em_andamento' && (
           <div>Em andamento com: {nomeDe(perfis, pedido.funcionario_atual)}</div>
+        )}
+        {pedido.status === 'pausado' && pedido.motivo_pausa && (
+          <div>Pausada por: {rotuloMotivoPausa(pedido.motivo_pausa)}</div>
         )}
         {pedido.status === 'finalizado' && pedido.finalizado_em && (
           <div>

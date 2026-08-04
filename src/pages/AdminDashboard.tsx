@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
-import { usePedidos } from '../hooks/usePedidos'
+import { usePedidosContext } from '../hooks/usePedidosContext'
 import { usePerfis } from '../hooks/usePerfis'
 import { usePedidoSessoes } from '../hooks/usePedidoSessoes'
 import { UrgenciaBadge } from '../components/UrgenciaBadge'
@@ -12,11 +12,13 @@ import { AppShell } from '../components/AppShell'
 import { EditarRequisicaoModal } from '../components/EditarRequisicaoModal'
 import { supabase } from '../lib/supabaseClient'
 import { formatDataHora } from '../lib/tempo'
+import { rotuloDeposito } from '../lib/depositos'
+import { rotuloMotivoPausa } from '../lib/motivosPausa'
 import type { Pedido } from '../types/database'
 
 export function AdminDashboard() {
   const { profile } = useAuth()
-  const { pedidos, carregando } = usePedidos()
+  const { pedidos, carregando } = usePedidosContext()
   const perfis = usePerfis()
   const [pedidoExpandido, setPedidoExpandido] = useState<string | null>(null)
   const [pedidoEditando, setPedidoEditando] = useState<Pedido | null>(null)
@@ -57,12 +59,14 @@ export function AdminDashboard() {
       )}
 
       {!carregando && pedidos.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <th className="px-3 py-2.5">Requisição</th>
                 <th className="px-3 py-2.5">Cliente</th>
+                <th className="px-3 py-2.5">Depósito</th>
+                <th className="px-3 py-2.5">Qtd.</th>
                 <th className="px-3 py-2.5">Urgência</th>
                 <th className="px-3 py-2.5">Status</th>
                 <th className="px-3 py-2.5">Cadastrada em</th>
@@ -82,11 +86,18 @@ export function AdminDashboard() {
                   >
                     <td className="px-3 py-2.5 font-medium text-card-foreground">#{pedido.numero_pv}</td>
                     <td className="px-3 py-2.5 text-card-foreground">{pedido.cliente}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{rotuloDeposito(pedido.deposito)}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{pedido.quantidade_itens}</td>
                     <td className="px-3 py-2.5">
                       <UrgenciaBadge urgencia={pedido.urgencia} />
                     </td>
                     <td className="px-3 py-2.5">
                       <StatusBadge pedido={pedido} />
+                      {pedido.status === 'pausado' && pedido.motivo_pausa && (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {rotuloMotivoPausa(pedido.motivo_pausa)}
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground">{formatDataHora(pedido.created_at)}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">
@@ -124,7 +135,7 @@ export function AdminDashboard() {
                   </tr>
                   {pedidoExpandido === pedido.id && (
                     <tr className="border-t border-border bg-muted/20">
-                      <td colSpan={8} className="px-4 py-3">
+                      <td colSpan={10} className="px-4 py-3">
                         <SessoesTimeline sessoes={sessoes} perfis={perfis} />
                       </td>
                     </tr>
