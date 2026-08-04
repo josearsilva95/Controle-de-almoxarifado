@@ -19,6 +19,21 @@ function jsonResponse(body: unknown, status: number): Response {
   })
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/**
+ * Extrai uma mensagem de erro utilizável, com fallback — alguns erros do SDK do
+ * Supabase chegam com `.message` vazio ou "{}" (JSON.stringify de um objeto sem
+ * campos úteis), o que sem essa checagem acabava aparecendo cru na tela do usuário.
+ */
+function mensagemDeErro(erro: unknown, fallback: string): string {
+  if (erro && typeof erro === 'object' && 'message' in erro) {
+    const msg = (erro as { message?: unknown }).message
+    if (typeof msg === 'string' && msg.trim() && msg.trim() !== '{}') return msg
+  }
+  return fallback
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -63,6 +78,9 @@ Deno.serve(async (req) => {
     if (!email || !senha || !nomeCompleto) {
       return jsonResponse({ erro: 'Preencha e-mail, senha e nome completo.' }, 400)
     }
+    if (!EMAIL_REGEX.test(email)) {
+      return jsonResponse({ erro: 'E-mail inválido. Use o formato nome@dominio.com.' }, 400)
+    }
     if (senha.length < 6) {
       return jsonResponse({ erro: 'A senha precisa ter pelo menos 6 caracteres.' }, 400)
     }
@@ -78,7 +96,11 @@ Deno.serve(async (req) => {
     })
 
     if (erroCriacao || !novoUsuario.user) {
-      return jsonResponse({ erro: erroCriacao?.message ?? 'Não foi possível criar o usuário.' }, 400)
+      console.error('Erro ao criar usuário no Auth:', JSON.stringify(erroCriacao))
+      return jsonResponse(
+        { erro: mensagemDeErro(erroCriacao, 'Não foi possível criar o usuário. Verifique o e-mail informado.') },
+        400
+      )
     }
 
     const baseUsername = email.split('@')[0].replace(/[^a-z0-9._-]/g, '')
@@ -104,13 +126,18 @@ Deno.serve(async (req) => {
 
     if (erroPerfil) {
       // Evita usuário "órfão" no Auth sem profile correspondente.
+      console.error('Erro ao salvar profile:', JSON.stringify(erroPerfil))
       await admin.auth.admin.deleteUser(novoUsuario.user.id)
-      return jsonResponse({ erro: `Não foi possível salvar o perfil: ${erroPerfil.message}` }, 400)
+      return jsonResponse(
+        { erro: `Não foi possível salvar o perfil: ${mensagemDeErro(erroPerfil, 'erro desconhecido')}` },
+        400
+      )
     }
 
     return jsonResponse({ ok: true, email, username }, 200)
   } catch (erro) {
-    const mensagem = erro instanceof Error ? erro.message : String(erro)
+    console.error('Erro inesperado na função:', erro)
+    const mensagem = mensagemDeErro(erro, String(erro))
     return jsonResponse({ erro: `Erro inesperado: ${mensagem}` }, 500)
   }
 })
