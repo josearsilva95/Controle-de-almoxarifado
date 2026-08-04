@@ -147,6 +147,14 @@ create policy pedido_sessoes_update_propria_aberta
   using (usuario_id = auth.uid() and fim is null)
   with check (usuario_id = auth.uid());
 
+-- pedido_sessoes: só admin exclui — necessário para a cascata funcionar quando
+-- um admin exclui a requisição pai (sem isso, o delete em pedidos falha por
+-- não ter permissão de apagar as sessões filhas via RLS).
+create policy pedido_sessoes_delete_admin
+  on public.pedido_sessoes for delete
+  to authenticated
+  using (public.is_admin());
+
 -- ============================================================
 -- Realtime — habilita replicação para as tabelas usadas nos hooks
 -- ============================================================
