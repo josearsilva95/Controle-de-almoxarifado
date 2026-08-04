@@ -2,6 +2,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { RotaProtegida } from './auth/RotaProtegida'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { PedidosProvider } from './hooks/PedidosProvider'
 import { Login } from './pages/Login'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { AdminCadastrarPV } from './pages/AdminCadastrarPV'
@@ -15,59 +16,61 @@ export function App() {
     <ErrorBoundary>
       <AuthProvider>
         <HashRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/admin"
-              element={
-                <RotaProtegida role="admin">
-                  <AdminDashboard />
-                </RotaProtegida>
-              }
-            />
-            <Route
-              path="/admin/nova-requisicao"
-              element={
-                <RotaProtegida role="admin">
-                  <AdminCadastrarPV />
-                </RotaProtegida>
-              }
-            />
-            <Route
-              path="/admin/colaboradores"
-              element={
-                <RotaProtegida role="admin">
-                  <AdminColaboradores />
-                </RotaProtegida>
-              }
-            />
-            <Route
-              path="/admin/novo-colaborador"
-              element={
-                <RotaProtegida role="admin">
-                  <AdminNovoColaborador />
-                </RotaProtegida>
-              }
-            />
-            <Route
-              path="/admin/relatorios"
-              element={
-                <RotaProtegida role="admin">
-                  <AdminRelatorios />
-                </RotaProtegida>
-              }
-            />
-            <Route
-              path="/tarefas"
-              element={
-                <RotaProtegida role="funcionario">
-                  <FuncionarioTarefas />
-                </RotaProtegida>
-              }
-            />
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
+          <PedidosProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/admin"
+                element={
+                  <RotaProtegida role="admin">
+                    <AdminDashboard />
+                  </RotaProtegida>
+                }
+              />
+              <Route
+                path="/admin/nova-requisicao"
+                element={
+                  <RotaProtegida role="admin">
+                    <AdminCadastrarPV />
+                  </RotaProtegida>
+                }
+              />
+              <Route
+                path="/admin/colaboradores"
+                element={
+                  <RotaProtegida role="admin">
+                    <AdminColaboradores />
+                  </RotaProtegida>
+                }
+              />
+              <Route
+                path="/admin/novo-colaborador"
+                element={
+                  <RotaProtegida role="admin">
+                    <AdminNovoColaborador />
+                  </RotaProtegida>
+                }
+              />
+              <Route
+                path="/admin/relatorios"
+                element={
+                  <RotaProtegida role="admin">
+                    <AdminRelatorios />
+                  </RotaProtegida>
+                }
+              />
+              <Route
+                path="/tarefas"
+                element={
+                  <RotaProtegida role="funcionario">
+                    <FuncionarioTarefas />
+                  </RotaProtegida>
+                }
+              />
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </PedidosProvider>
         </HashRouter>
       </AuthProvider>
     </ErrorBoundary>
