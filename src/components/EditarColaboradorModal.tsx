@@ -1,0 +1,145 @@
+import { useState } from 'react'
+import type { FormEvent } from 'react'
+import { FunctionsHttpError } from '@supabase/supabase-js'
+import { Modal } from './ui/Modal'
+import { supabase } from '../lib/supabaseClient'
+import type { Profile, Role } from '../types/database'
+
+const OPCOES_ROLE: Role[] = ['funcionario', 'admin']
+
+interface EditarColaboradorModalProps {
+  colaborador: Profile
+  onFechar: () => void
+  onSalvo: () => void
+}
+
+async function extrairMensagemErro(error: unknown): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const corpo = await error.context.json()
+      if (typeof corpo?.erro === 'string') return corpo.erro
+    } catch {
+      // corpo não era JSON válido, cai no fallback abaixo
+    }
+  }
+  if (error instanceof Error) return error.message
+  return 'Não foi possível salvar o colaborador.'
+}
+
+export function EditarColaboradorModal({ colaborador, onFechar, onSalvo }: EditarColaboradorModalProps) {
+  const [nomeCompleto, setNomeCompleto] = useState(colaborador.nome_completo)
+  const [email, setEmail] = useState(colaborador.email ?? '')
+  const [senha, setSenha] = useState('')
+  const [role, setRole] = useState<Role>(colaborador.role)
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+
+  async function handleSubmit(evento: FormEvent) {
+    evento.preventDefault()
+    setErro(null)
+    setSalvando(true)
+
+    const { data, error } = await supabase.functions.invoke('rapid-worker', {
+      body: {
+        userId: colaborador.id,
+        email: email.trim(),
+        senha: senha || undefined,
+        nome_completo: nomeCompleto.trim(),
+        role,
+      },
+    })
+
+    setSalvando(false)
+
+    if (error) {
+      setErro(await extrairMensagemErro(error))
+      return
+    }
+    if (data?.erro) {
+      setErro(data.erro)
+      return
+    }
+
+    onSalvo()
+  }
+
+  return (
+    <Modal titulo={`Editar ${colaborador.nome_completo}`} onFechar={onFechar}>
+      <form onSubmit={handleSubmit}>
+        <label className="mb-3.5 flex flex-col gap-1 text-sm font-medium text-card-foreground">
+          Nome completo
+          <input
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+            type="text"
+            value={nomeCompleto}
+            onChange={(e) => setNomeCompleto(e.target.value)}
+            required
+            autoFocus
+          />
+        </label>
+
+        <label className="mb-3.5 flex flex-col gap-1 text-sm font-medium text-card-foreground">
+          E-mail
+          <input
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </label>
+
+        <label className="mb-3.5 flex flex-col gap-1 text-sm font-medium text-card-foreground">
+          Nova senha
+          <input
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+            type="text"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            minLength={6}
+            placeholder="Deixe em branco para manter a atual"
+          />
+        </label>
+
+        <div className="mb-4">
+          <span className="mb-1 block text-sm font-medium text-card-foreground">Papel</span>
+          <div className="flex gap-2">
+            {OPCOES_ROLE.map((opcao) => (
+              <button
+                key={opcao}
+                type="button"
+                className={`flex-1 rounded-md border-2 px-3 py-2 text-sm font-medium transition-colors ${
+                  role === opcao
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground'
+                }`}
+                onClick={() => setRole(opcao)}
+              >
+                {opcao === 'admin' ? 'Administrador' : 'Almoxarife'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {erro && <p className="mb-3.5 text-sm text-destructive">{erro}</p>}
+
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground hover:bg-muted"
+            onClick={onFechar}
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
+            disabled={salvando}
+          >
+            {salvando ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}

@@ -58,7 +58,10 @@ export function AdminRelatorios() {
   }, [pedidos])
 
   const desempenhoMes = useMemo(
-    () => [...desempenho].sort((a, b) => b.requisicoesFinalizadasMes - a.requisicoesFinalizadasMes),
+    () =>
+      desempenho
+        .filter((d) => d.role === 'funcionario') // admins não executam separação, não entram nas estatísticas
+        .sort((a, b) => b.requisicoesFinalizadasMes - a.requisicoesFinalizadasMes),
     [desempenho]
   )
 

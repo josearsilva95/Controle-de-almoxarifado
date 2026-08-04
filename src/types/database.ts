@@ -8,6 +8,7 @@ export interface Profile {
   id: string
   username: string
   nome_completo: string
+  email: string | null
   role: Role
   created_at: string
 }

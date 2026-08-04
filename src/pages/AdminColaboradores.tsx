@@ -1,16 +1,27 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Pencil } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
 import { BarraProgresso } from '../components/ui/BarraProgresso'
+import { EditarColaboradorModal } from '../components/EditarColaboradorModal'
 import { usePedidos } from '../hooks/usePedidos'
+import { usePerfis } from '../hooks/usePerfis'
 import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
 import { formatDuracao } from '../lib/tempo'
+import type { Profile } from '../types/database'
 
 export function AdminColaboradores() {
   const { pedidos, carregando: carregandoPedidos } = usePedidos()
+  const perfis = usePerfis()
   const { desempenho, carregando: carregandoDesempenho } = useDesempenhoColaboradores(pedidos)
+  const [colaboradorEditando, setColaboradorEditando] = useState<Profile | null>(null)
   const carregando = carregandoPedidos || carregandoDesempenho
-  const maiorTotal = Math.max(1, ...desempenho.map((d) => d.requisicoesFinalizadas))
+
+  const maiorTotal = Math.max(
+    1,
+    ...desempenho.filter((d) => d.role === 'funcionario').map((d) => d.requisicoesFinalizadas)
+  )
 
   return (
     <AppShell>
@@ -40,18 +51,47 @@ export function AdminColaboradores() {
                     {colaborador.role === 'admin' ? 'Admin' : 'Funcionário'}
                   </span>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {colaborador.requisicoesFinalizadas} requisições · {formatDuracao(colaborador.tempoTotalSegundos)}
-                </span>
+                <div className="flex items-center gap-2">
+                  {colaborador.role === 'funcionario' && (
+                    <span className="text-sm text-muted-foreground">
+                      {colaborador.requisicoesFinalizadas} requisições · {formatDuracao(colaborador.tempoTotalSegundos)}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-card-foreground"
+                    onClick={() => {
+                      const perfil = perfis[colaborador.usuarioId]
+                      if (perfil) setColaboradorEditando(perfil)
+                    }}
+                    aria-label={`Editar ${colaborador.nome}`}
+                    title="Editar"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <BarraProgresso percent={(colaborador.requisicoesFinalizadas / maiorTotal) * 100} />
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                {colaborador.requisicoesFinalizadasMes} finalizada
-                {colaborador.requisicoesFinalizadasMes === 1 ? '' : 's'} este mês
-              </p>
+
+              {colaborador.role === 'funcionario' && (
+                <>
+                  <BarraProgresso percent={(colaborador.requisicoesFinalizadas / maiorTotal) * 100} />
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {colaborador.requisicoesFinalizadasMes} finalizada
+                    {colaborador.requisicoesFinalizadasMes === 1 ? '' : 's'} este mês
+                  </p>
+                </>
+              )}
             </Cartao>
           ))}
         </div>
+      )}
+
+      {colaboradorEditando && (
+        <EditarColaboradorModal
+          colaborador={colaboradorEditando}
+          onFechar={() => setColaboradorEditando(null)}
+          onSalvo={() => setColaboradorEditando(null)}
+        />
       )}
     </AppShell>
   )

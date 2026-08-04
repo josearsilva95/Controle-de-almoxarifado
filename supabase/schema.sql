@@ -9,6 +9,7 @@ create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   username text not null unique,
   nome_completo text not null,
+  email text,
   role text not null default 'funcionario' check (role in ('admin', 'funcionario')),
   created_at timestamptz not null default now()
 );

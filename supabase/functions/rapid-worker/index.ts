@@ -1,9 +1,8 @@
-// Edge Function: rapid-worker (cria colaboradores)
-// Cria um usuário no Supabase Auth + a linha correspondente em `profiles`.
+// Edge Function: rapid-worker (cria e edita colaboradores)
+// Cria/edita um usuário no Supabase Auth + a linha correspondente em `profiles`.
 // Só pode ser chamada por um usuário autenticado com role = 'admin'.
-// Usa a service_role key (disponível automaticamente como variável de ambiente
-// dentro da Edge Function, nunca exposta ao navegador) para ter permissão de
-// criar contas via Auth Admin API.
+// Usa a service_role key (via env var automática ou secret manual SERVICE_ROLE_KEY,
+// nunca exposta ao navegador) para ter permissão de mexer no Auth Admin API.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -73,28 +72,24 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json()
+    const userId = typeof body.userId === 'string' && body.userId ? body.userId : null
     const email = String(body.email ?? '').trim().toLowerCase()
     const senha = String(body.senha ?? '')
     const nomeCompleto = String(body.nome_completo ?? '').trim()
     const role = body.role === 'admin' ? 'admin' : 'funcionario'
 
-    if (!email || !senha || !nomeCompleto) {
-      return jsonResponse({ erro: 'Preencha e-mail, senha e nome completo.' }, 400)
+    if (!email || !nomeCompleto) {
+      return jsonResponse({ erro: 'Preencha e-mail e nome completo.' }, 400)
     }
     if (!EMAIL_REGEX.test(email)) {
       return jsonResponse({ erro: 'E-mail inválido. Use o formato nome@dominio.com.' }, 400)
     }
-    if (senha.length < 6) {
+    if (!userId && !senha) {
+      return jsonResponse({ erro: 'Preencha a senha.' }, 400)
+    }
+    if (senha && senha.length < 6) {
       return jsonResponse({ erro: 'A senha precisa ter pelo menos 6 caracteres.' }, 400)
     }
-
-    console.log('Diagnóstico env:', {
-      temSupabaseUrl: Boolean(supabaseUrl),
-      supabaseUrl,
-      temAnonKey: Boolean(anonKey),
-      temServiceRoleKey: Boolean(serviceRoleKey),
-      tamanhoServiceRoleKey: serviceRoleKey?.length ?? 0,
-    })
 
     if (!serviceRoleKey) {
       return jsonResponse(
@@ -109,6 +104,59 @@ Deno.serve(async (req) => {
     // Cliente com a service_role key, com permissão total (ignora RLS) — só usado
     // a partir daqui, depois de já termos confirmado que quem chamou é admin.
     const admin = createClient(supabaseUrl, serviceRoleKey)
+
+    if (userId) {
+      // ============================================================
+      // EDITAR colaborador existente
+      // ============================================================
+      const corpoAtualizacao: Record<string, unknown> = { email, email_confirm: true }
+      if (senha) corpoAtualizacao.password = senha
+
+      const respostaEdicao = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: serviceRoleKey,
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify(corpoAtualizacao),
+      })
+      const corpoRespostaEdicao = await respostaEdicao.json().catch(() => null)
+
+      if (!respostaEdicao.ok) {
+        console.error('Erro ao editar usuário no Auth:', respostaEdicao.status, JSON.stringify(corpoRespostaEdicao))
+        const mensagemApi =
+          corpoRespostaEdicao?.msg ||
+          corpoRespostaEdicao?.message ||
+          corpoRespostaEdicao?.error_description ||
+          corpoRespostaEdicao?.error
+        return jsonResponse(
+          { erro: mensagemApi || `Não foi possível editar o usuário (status ${respostaEdicao.status}).` },
+          400
+        )
+      }
+
+      const { error: erroPerfil } = await admin
+        .from('profiles')
+        .update({ nome_completo: nomeCompleto, email, role })
+        .eq('id', userId)
+
+      if (erroPerfil) {
+        console.error('Erro ao atualizar profile:', JSON.stringify(erroPerfil))
+        return jsonResponse(
+          {
+            erro: `Usuário atualizado, mas não foi possível salvar o perfil: ${mensagemDeErro(erroPerfil, 'erro desconhecido')}`,
+          },
+          400
+        )
+      }
+
+      return jsonResponse({ ok: true, email }, 200)
+    }
+
+    // ============================================================
+    // CRIAR novo colaborador
+    // ============================================================
 
     // Chama a API de Auth diretamente (em vez de admin.auth.admin.createUser) porque
     // o SDK descarta o corpo da resposta para qualquer status 5xx e mostra só uma
@@ -159,6 +207,7 @@ Deno.serve(async (req) => {
       id: novoUsuario.user.id,
       username,
       nome_completo: nomeCompleto,
+      email,
       role,
     })
 
