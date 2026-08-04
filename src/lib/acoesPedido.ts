@@ -8,9 +8,17 @@ type Resultado = { erro: string | null }
  * (pausado -> em_andamento). iniciado_em/iniciado_por só são gravados na primeira vez.
  * A tentativa de assumir uma PV já em andamento falha aqui via unique constraint
  * (índice único parcial em pedido_sessoes), que é o mecanismo real de exclusividade.
+ *
+ * `agoraOverride` permite que um lote de PVs iniciadas juntas (seleção múltipla)
+ * grave o mesmo instante exato de início em todas, em vez de cada uma gerar seu
+ * próprio timestamp (que variaria por milissegundos entre as chamadas).
  */
-export async function assumirPedido(pedido: Pedido, usuarioId: string): Promise<Resultado> {
-  const agora = new Date().toISOString()
+export async function assumirPedido(
+  pedido: Pedido,
+  usuarioId: string,
+  agoraOverride?: string
+): Promise<Resultado> {
+  const agora = agoraOverride ?? new Date().toISOString()
 
   const { error: erroSessao } = await supabase.from('pedido_sessoes').insert({
     pedido_id: pedido.id,

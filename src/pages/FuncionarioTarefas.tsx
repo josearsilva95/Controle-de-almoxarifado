@@ -84,11 +84,14 @@ export function FuncionarioTarefas() {
       return novo
     })
 
+    // Mesmo instante para todas do lote — é isso que faz elas "iniciarem juntas"
+    // de verdade, em vez de cada uma gravar seu próprio timestamp por milissegundos.
+    const agora = new Date().toISOString()
     const resultados = await Promise.all(
       idsSelecionados.map(async (id) => {
         const pedido = pedidos.find((p) => p.id === id)
         if (!pedido) return { id, erro: 'Requisição não encontrada.' }
-        const { erro } = await assumirPedido(pedido, profile!.id)
+        const { erro } = await assumirPedido(pedido, profile!.id, agora)
         return { id, erro }
       })
     )
