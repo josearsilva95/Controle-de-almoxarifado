@@ -17,6 +17,8 @@ export function FuncionarioTarefas() {
   const [emProcessamento, setEmProcessamento] = useState<Set<string>>(new Set())
   const [mensagemErro, setMensagemErro] = useState<string | null>(null)
   const [pedidoPausando, setPedidoPausando] = useState<Pedido | null>(null)
+  const [modoSelecao, setModoSelecao] = useState(false)
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
   const pedidosVisiveis = useMemo(() => {
     return pedidos
@@ -27,6 +29,11 @@ export function FuncionarioTarefas() {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       })
   }, [pedidos])
+
+  const pendentesDisponiveis = useMemo(
+    () => pedidosVisiveis.filter((p) => p.status === 'pendente'),
+    [pedidosVisiveis]
+  )
 
   if (!profile) return null
 
@@ -49,9 +56,100 @@ export function FuncionarioTarefas() {
     setPedidoPausando(null)
   }
 
+  function toggleSelecao(pedido: Pedido) {
+    setSelecionados((atual) => {
+      const novo = new Set(atual)
+      if (novo.has(pedido.id)) {
+        novo.delete(pedido.id)
+      } else {
+        novo.add(pedido.id)
+      }
+      return novo
+    })
+  }
+
+  function cancelarSelecao() {
+    setModoSelecao(false)
+    setSelecionados(new Set())
+  }
+
+  async function iniciarSelecionadas() {
+    const idsSelecionados = [...selecionados]
+    if (idsSelecionados.length === 0) return
+
+    setMensagemErro(null)
+    setEmProcessamento((atual) => {
+      const novo = new Set(atual)
+      idsSelecionados.forEach((id) => novo.add(id))
+      return novo
+    })
+
+    const resultados = await Promise.all(
+      idsSelecionados.map(async (id) => {
+        const pedido = pedidos.find((p) => p.id === id)
+        if (!pedido) return { id, erro: 'Requisição não encontrada.' }
+        const { erro } = await assumirPedido(pedido, profile!.id)
+        return { id, erro }
+      })
+    )
+
+    setEmProcessamento((atual) => {
+      const novo = new Set(atual)
+      idsSelecionados.forEach((id) => novo.delete(id))
+      return novo
+    })
+
+    const falhas = resultados.filter((r) => r.erro)
+    if (falhas.length > 0) {
+      setMensagemErro(
+        `${falhas.length} de ${idsSelecionados.length} requisições não puderam ser iniciadas (talvez já tenham sido assumidas por outro funcionário).`
+      )
+    }
+
+    cancelarSelecao()
+  }
+
   return (
     <AppShell>
-      <h2 className="mb-4 text-lg font-semibold text-foreground">Minhas Requisições</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-foreground">Minhas Requisições</h2>
+        {!modoSelecao ? (
+          <button
+            type="button"
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-card-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            onClick={() => setModoSelecao(true)}
+            disabled={pendentesDisponiveis.length === 0}
+          >
+            Selecionar várias
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">{selecionados.size} selecionada(s)</span>
+            <button
+              type="button"
+              className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-card-foreground hover:bg-muted"
+              onClick={cancelarSelecao}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
+              onClick={iniciarSelecionadas}
+              disabled={selecionados.size === 0}
+            >
+              Iniciar {selecionados.size > 0 ? selecionados.size : ''} requisiç{selecionados.size === 1 ? 'ão' : 'ões'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {modoSelecao && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Clique nas requisições pendentes que você vai separar agora e depois em "Iniciar" — todas passam a
+          correr o tempo ao mesmo tempo.
+        </p>
+      )}
 
       {mensagemErro && <p className="mb-4 text-sm text-destructive">{mensagemErro}</p>}
 
@@ -76,6 +174,9 @@ export function FuncionarioTarefas() {
               onContinuar={(p) => executarAcao(p, assumirPedido)}
               onPausar={(p) => setPedidoPausando(p)}
               onFinalizar={(p) => executarAcao(p, finalizarPedido)}
+              modoSelecao={modoSelecao}
+              selecionado={selecionados.has(pedido.id)}
+              onToggleSelecao={toggleSelecao}
             />
           ))}
         </div>

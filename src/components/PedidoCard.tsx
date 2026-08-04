@@ -15,6 +15,9 @@ interface PedidoCardProps {
   onPausar: (pedido: Pedido) => void
   onContinuar: (pedido: Pedido) => void
   onFinalizar: (pedido: Pedido) => void
+  modoSelecao?: boolean
+  selecionado?: boolean
+  onToggleSelecao?: (pedido: Pedido) => void
 }
 
 function nomeDe(perfis: Record<string, Profile>, id: string | null): string {
@@ -36,17 +39,36 @@ export function PedidoCard({
   onPausar,
   onContinuar,
   onFinalizar,
+  modoSelecao = false,
+  selecionado = false,
+  onToggleSelecao,
 }: PedidoCardProps) {
   const souEuQueEstouTrabalhando = pedido.funcionario_atual === usuarioAtualId
+  const podeSelecionar = modoSelecao && pedido.status === 'pendente' && onToggleSelecao
 
   return (
     <div
-      className="rounded-xl border border-border bg-card p-5"
+      className={`rounded-xl border bg-card p-5 transition-colors ${
+        selecionado ? 'border-primary ring-2 ring-primary/30' : 'border-border'
+      } ${podeSelecionar ? 'cursor-pointer' : ''}`}
       style={{ borderLeft: `6px solid ${corDoStatus(pedido)}` }}
+      onClick={podeSelecionar ? () => onToggleSelecao(pedido) : undefined}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <span className="text-lg font-bold text-card-foreground">Requisição #{pedido.numero_pv}</span>
-        <StatusBadge pedido={pedido} />
+        <div className="flex items-center gap-2">
+          {podeSelecionar && (
+            <input
+              type="checkbox"
+              checked={selecionado}
+              onChange={() => onToggleSelecao(pedido)}
+              onClick={(e) => e.stopPropagation()}
+              className="h-4 w-4 accent-primary"
+              aria-label={`Selecionar requisição ${pedido.numero_pv}`}
+            />
+          )}
+          <StatusBadge pedido={pedido} />
+        </div>
       </div>
       <div className="mb-2.5 text-sm text-muted-foreground">{pedido.cliente}</div>
       <div className="mb-3">
@@ -76,33 +98,35 @@ export function PedidoCard({
           </div>
         )}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {pedido.status === 'pendente' && (
-          <button className={botaoPrimario} onClick={() => onIniciar(pedido)} disabled={processando}>
-            Iniciar
-          </button>
-        )}
-        {pedido.status === 'em_andamento' && souEuQueEstouTrabalhando && (
-          <>
-            <button className={botaoSecundario} onClick={() => onPausar(pedido)} disabled={processando}>
-              Pausar
+      {!modoSelecao && (
+        <div className="flex flex-wrap items-center gap-2">
+          {pedido.status === 'pendente' && (
+            <button className={botaoPrimario} onClick={() => onIniciar(pedido)} disabled={processando}>
+              Iniciar
             </button>
-            <button className={botaoPrimario} onClick={() => onFinalizar(pedido)} disabled={processando}>
-              Finalizar
+          )}
+          {pedido.status === 'em_andamento' && souEuQueEstouTrabalhando && (
+            <>
+              <button className={botaoSecundario} onClick={() => onPausar(pedido)} disabled={processando}>
+                Pausar
+              </button>
+              <button className={botaoPrimario} onClick={() => onFinalizar(pedido)} disabled={processando}>
+                Finalizar
+              </button>
+            </>
+          )}
+          {pedido.status === 'em_andamento' && !souEuQueEstouTrabalhando && (
+            <span className="text-sm text-muted-foreground">
+              Já está sendo separada por outro funcionário
+            </span>
+          )}
+          {pedido.status === 'pausado' && (
+            <button className={botaoPrimario} onClick={() => onContinuar(pedido)} disabled={processando}>
+              Continuar
             </button>
-          </>
-        )}
-        {pedido.status === 'em_andamento' && !souEuQueEstouTrabalhando && (
-          <span className="text-sm text-muted-foreground">
-            Já está sendo separada por outro funcionário
-          </span>
-        )}
-        {pedido.status === 'pausado' && (
-          <button className={botaoPrimario} onClick={() => onContinuar(pedido)} disabled={processando}>
-            Continuar
-          </button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
