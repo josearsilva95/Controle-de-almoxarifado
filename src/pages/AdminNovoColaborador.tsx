@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
@@ -12,6 +13,25 @@ function gerarSenhaAleatoria(): string {
   const alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
   const valores = crypto.getRandomValues(new Uint32Array(10))
   return Array.from(valores, (v) => alfabeto[v % alfabeto.length]).join('')
+}
+
+/**
+ * Quando a função responde com status não-2xx, supabase-js só expõe uma mensagem
+ * genérica em error.message ("Edge Function returned a non-2xx status code") — o
+ * corpo real da resposta (nosso { erro: "..." }) fica em error.context, que é o
+ * Response bruto e precisa ser lido separadamente.
+ */
+async function extrairMensagemErro(error: unknown): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const corpo = await error.context.json()
+      if (typeof corpo?.erro === 'string') return corpo.erro
+    } catch {
+      // corpo não era JSON válido, cai no fallback abaixo
+    }
+  }
+  if (error instanceof Error) return error.message
+  return 'Não foi possível criar o colaborador.'
 }
 
 export function AdminNovoColaborador() {
@@ -36,7 +56,7 @@ export function AdminNovoColaborador() {
     setEnviando(false)
 
     if (error) {
-      setErro(error.message || 'Não foi possível criar o colaborador.')
+      setErro(await extrairMensagemErro(error))
       return
     }
     if (data?.erro) {
