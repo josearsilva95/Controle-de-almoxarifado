@@ -47,7 +47,10 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    // Em alguns ambientes a variável automática SUPABASE_SERVICE_ROLE_KEY não fica
+    // disponível para funções publicadas pelo editor do painel — SERVICE_ROLE_KEY é
+    // um secret manual de fallback (Edge Functions → Secrets) com o mesmo valor.
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY') || ''
 
     // Cliente autenticado como quem chamou, só para descobrir quem é e checar o papel.
     const clienteChamador = createClient(supabaseUrl, anonKey, {
@@ -92,6 +95,16 @@ Deno.serve(async (req) => {
       temServiceRoleKey: Boolean(serviceRoleKey),
       tamanhoServiceRoleKey: serviceRoleKey?.length ?? 0,
     })
+
+    if (!serviceRoleKey) {
+      return jsonResponse(
+        {
+          erro:
+            'Configuração incompleta no servidor: falta a chave de serviço. Adicione o secret SERVICE_ROLE_KEY em Edge Functions → Secrets.',
+        },
+        500
+      )
+    }
 
     // Cliente com a service_role key, com permissão total (ignora RLS) — só usado
     // a partir daqui, depois de já termos confirmado que quem chamou é admin.
