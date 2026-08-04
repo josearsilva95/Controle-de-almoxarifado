@@ -110,28 +110,36 @@ Deno.serve(async (req) => {
     // a partir daqui, depois de já termos confirmado que quem chamou é admin.
     const admin = createClient(supabaseUrl, serviceRoleKey)
 
-    const { data: novoUsuario, error: erroCriacao } = await admin.auth.admin.createUser({
-      email,
-      password: senha,
-      email_confirm: true,
+    // Chama a API de Auth diretamente (em vez de admin.auth.admin.createUser) porque
+    // o SDK descarta o corpo da resposta para qualquer status 5xx e mostra só uma
+    // mensagem genérica vazia — isso escondia o motivo real da rejeição.
+    const respostaCriacao = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({ email, password: senha, email_confirm: true }),
     })
 
-    if (erroCriacao || !novoUsuario.user) {
+    const corpoCriacao = await respostaCriacao.json().catch(() => null)
+
+    if (!respostaCriacao.ok || !corpoCriacao?.id) {
       console.error(
-        'Erro ao criar usuário no Auth:',
-        JSON.stringify(erroCriacao),
-        'stack:',
-        erroCriacao instanceof Error ? erroCriacao.stack : 'sem stack',
-        'cause:',
-        erroCriacao && typeof erroCriacao === 'object' && 'cause' in erroCriacao
-          ? String((erroCriacao as { cause?: unknown }).cause)
-          : 'sem cause'
+        'Erro ao criar usuário no Auth (raw fetch):',
+        respostaCriacao.status,
+        JSON.stringify(corpoCriacao)
       )
+      const mensagemApi =
+        corpoCriacao?.msg || corpoCriacao?.message || corpoCriacao?.error_description || corpoCriacao?.error
       return jsonResponse(
-        { erro: mensagemDeErro(erroCriacao, 'Não foi possível criar o usuário. Verifique o e-mail informado.') },
+        { erro: mensagemApi || `Não foi possível criar o usuário (status ${respostaCriacao.status}).` },
         400
       )
     }
+
+    const novoUsuario = { user: { id: corpoCriacao.id as string } }
 
     const baseUsername = email.split('@')[0].replace(/[^a-z0-9._-]/g, '')
     let username = baseUsername
