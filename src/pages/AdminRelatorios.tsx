@@ -2,16 +2,24 @@ import { useMemo } from 'react'
 import { CheckCircle2, Clock, ClipboardList, Calendar } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
-import { BarraProgresso } from '../components/ui/BarraProgresso'
 import { KpiCard } from '../components/ui/KpiCard'
+import { GraficoBarrasHorizontais } from '../components/ui/GraficoBarrasHorizontais'
 import { usePedidos } from '../hooks/usePedidos'
 import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
-import { rotuloStatus, rotuloUrgencia } from '../lib/cores'
+import { CORES, rotuloUrgencia } from '../lib/cores'
 import { formatDuracao } from '../lib/tempo'
-import type { Status, Urgencia } from '../types/database'
+import type { Urgencia } from '../types/database'
 
 const URGENCIAS: Urgencia[] = ['urgente', 'medio', 'nao_urgente']
-const STATUSES: Status[] = ['pendente', 'em_andamento', 'pausado', 'finalizado']
+
+// "Não urgente" usa branco/neutro nos badges (sobre fundo de cartão), mas como
+// preenchimento de barra isso ficaria invisível — usa o tom de texto secundário
+// do tema só neste contexto de gráfico, mantendo as outras cores idênticas ao badge.
+const COR_BARRA_URGENCIA: Record<Urgencia, string> = {
+  urgente: CORES.urgente,
+  medio: CORES.medio,
+  nao_urgente: 'var(--muted-foreground)',
+}
 
 function mesmoMes(iso: string, agora: Date): boolean {
   const data = new Date(iso)
@@ -39,10 +47,6 @@ export function AdminRelatorios() {
       urgencia,
       total: pedidos.filter((p) => p.urgencia === urgencia).length,
     }))
-    const porStatus = STATUSES.map((status) => ({
-      status,
-      total: pedidos.filter((p) => p.status === status).length,
-    }))
 
     return {
       totalGeral: pedidos.length,
@@ -50,17 +54,25 @@ export function AdminRelatorios() {
       finalizadasMes: finalizadosMes.length,
       tempoMedioSegundos,
       porUrgencia,
-      porStatus,
     }
   }, [pedidos])
 
-  const rankingMes = useMemo(
+  const desempenhoMes = useMemo(
     () => [...desempenho].sort((a, b) => b.requisicoesFinalizadasMes - a.requisicoesFinalizadasMes),
     [desempenho]
   )
-  const maiorUrgencia = Math.max(1, ...stats.porUrgencia.map((u) => u.total))
-  const maiorStatus = Math.max(1, ...stats.porStatus.map((s) => s.total))
-  const maiorRankingMes = Math.max(1, ...rankingMes.map((r) => r.requisicoesFinalizadasMes))
+
+  const itensUrgencia = stats.porUrgencia.map((item) => ({
+    rotulo: rotuloUrgencia(item.urgencia),
+    valor: item.total,
+    cor: COR_BARRA_URGENCIA[item.urgencia],
+  }))
+
+  const itensDesempenho = desempenhoMes.map((item) => ({
+    rotulo: item.nome,
+    valor: item.requisicoesFinalizadasMes,
+    cor: 'var(--primary)',
+  }))
 
   if (carregando) {
     return (
@@ -85,51 +97,19 @@ export function AdminRelatorios() {
         <Cartao>
           <h3 className="text-base font-semibold text-card-foreground">Requisições por urgência</h3>
           <p className="text-sm text-muted-foreground">Distribuição atual de todas as requisições</p>
-          <div className="mt-5 space-y-4">
-            {stats.porUrgencia.map((item) => (
-              <div key={item.urgencia}>
-                <div className="mb-1.5 flex items-center justify-between text-sm">
-                  <span className="font-medium text-card-foreground">{rotuloUrgencia(item.urgencia)}</span>
-                  <span className="text-muted-foreground">{item.total}</span>
-                </div>
-                <BarraProgresso percent={(item.total / maiorUrgencia) * 100} />
-              </div>
-            ))}
+          <div className="mt-5">
+            <GraficoBarrasHorizontais itens={itensUrgencia} />
           </div>
         </Cartao>
 
         <Cartao>
-          <h3 className="text-base font-semibold text-card-foreground">Requisições por status</h3>
-          <p className="text-sm text-muted-foreground">Situação atual de todas as requisições</p>
-          <div className="mt-5 space-y-4">
-            {stats.porStatus.map((item) => (
-              <div key={item.status}>
-                <div className="mb-1.5 flex items-center justify-between text-sm">
-                  <span className="font-medium text-card-foreground">{rotuloStatus(item.status)}</span>
-                  <span className="text-muted-foreground">{item.total}</span>
-                </div>
-                <BarraProgresso percent={(item.total / maiorStatus) * 100} />
-              </div>
-            ))}
-          </div>
-        </Cartao>
-
-        <Cartao className="lg:col-span-2">
-          <h3 className="text-base font-semibold text-card-foreground">Ranking de colaboradores do mês</h3>
+          <h3 className="text-base font-semibold text-card-foreground">Desempenho dos colaboradores</h3>
           <p className="text-sm text-muted-foreground">Requisições finalizadas no mês atual, por colaborador</p>
-          <div className="mt-5 space-y-4">
-            {rankingMes.map((item) => (
-              <div key={item.usuarioId}>
-                <div className="mb-1.5 flex items-center justify-between text-sm">
-                  <span className="font-medium text-card-foreground">{item.nome}</span>
-                  <span className="text-muted-foreground">{item.requisicoesFinalizadasMes}</span>
-                </div>
-                <BarraProgresso percent={(item.requisicoesFinalizadasMes / maiorRankingMes) * 100} />
-              </div>
-            ))}
-            {rankingMes.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhum colaborador cadastrado ainda.</p>
-            )}
+          <div className="mt-5">
+            <GraficoBarrasHorizontais
+              itens={itensDesempenho}
+              vazio="Nenhum colaborador cadastrado ainda."
+            />
           </div>
         </Cartao>
       </div>
