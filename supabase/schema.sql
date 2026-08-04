@@ -122,6 +122,12 @@ create policy pedidos_update_autenticados
   using (true)
   with check (true);
 
+-- pedidos: só admin exclui (inclusive requisições já finalizadas).
+create policy pedidos_delete_admin
+  on public.pedidos for delete
+  to authenticated
+  using (public.is_admin());
+
 -- pedido_sessoes: leitura liberada a todo autenticado (admin precisa ver tudo).
 create policy pedido_sessoes_select_autenticados
   on public.pedido_sessoes for select

@@ -1,4 +1,6 @@
 import { Fragment, useState } from 'react'
+import type { MouseEvent } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { usePedidos } from '../hooks/usePedidos'
 import { usePerfis } from '../hooks/usePerfis'
@@ -7,13 +9,17 @@ import { UrgenciaBadge } from '../components/UrgenciaBadge'
 import { StatusBadge } from '../components/StatusBadge'
 import { SessoesTimeline } from '../components/SessoesTimeline'
 import { AppShell } from '../components/AppShell'
+import { EditarRequisicaoModal } from '../components/EditarRequisicaoModal'
+import { supabase } from '../lib/supabaseClient'
 import { formatDataHora } from '../lib/tempo'
+import type { Pedido } from '../types/database'
 
 export function AdminDashboard() {
   const { profile } = useAuth()
   const { pedidos, carregando } = usePedidos()
   const perfis = usePerfis()
   const [pedidoExpandido, setPedidoExpandido] = useState<string | null>(null)
+  const [pedidoEditando, setPedidoEditando] = useState<Pedido | null>(null)
   const { sessoes } = usePedidoSessoes(pedidoExpandido)
 
   if (!profile) return null
@@ -21,6 +27,24 @@ export function AdminDashboard() {
   function nomeDe(id: string | null): string {
     if (!id) return '—'
     return perfis[id]?.nome_completo ?? 'Desconhecido'
+  }
+
+  function abrirEdicao(pedido: Pedido, evento: MouseEvent) {
+    evento.stopPropagation()
+    setPedidoEditando(pedido)
+  }
+
+  async function excluirPedido(pedido: Pedido, evento: MouseEvent) {
+    evento.stopPropagation()
+    const confirmado = window.confirm(
+      `Excluir a requisição #${pedido.numero_pv}? Essa ação não pode ser desfeita.`
+    )
+    if (!confirmado) return
+
+    const { error } = await supabase.from('pedidos').delete().eq('id', pedido.id)
+    if (error) {
+      window.alert(`Não foi possível excluir: ${error.message}`)
+    }
   }
 
   return (
@@ -44,6 +68,7 @@ export function AdminDashboard() {
                 <th className="px-3 py-2.5">Cadastrada em</th>
                 <th className="px-3 py-2.5">Iniciada em / por</th>
                 <th className="px-3 py-2.5">Finalizada em / por</th>
+                <th className="px-3 py-2.5 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -74,10 +99,32 @@ export function AdminDashboard() {
                         ? `${formatDataHora(pedido.finalizado_em)} · ${nomeDe(pedido.finalizado_por)}`
                         : '—'}
                     </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          type="button"
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-card-foreground"
+                          onClick={(e) => abrirEdicao(pedido, e)}
+                          aria-label={`Editar requisição ${pedido.numero_pv}`}
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          onClick={(e) => excluirPedido(pedido, e)}
+                          aria-label={`Excluir requisição ${pedido.numero_pv}`}
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                   {pedidoExpandido === pedido.id && (
                     <tr className="border-t border-border bg-muted/20">
-                      <td colSpan={7} className="px-4 py-3">
+                      <td colSpan={8} className="px-4 py-3">
                         <SessoesTimeline sessoes={sessoes} perfis={perfis} />
                       </td>
                     </tr>
@@ -87,6 +134,14 @@ export function AdminDashboard() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {pedidoEditando && (
+        <EditarRequisicaoModal
+          pedido={pedidoEditando}
+          onFechar={() => setPedidoEditando(null)}
+          onSalvo={() => setPedidoEditando(null)}
+        />
       )}
     </AppShell>
   )
