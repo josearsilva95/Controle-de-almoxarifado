@@ -77,9 +77,9 @@ Deno.serve(async (req) => {
     const email = String(body.email ?? '').trim().toLowerCase()
     const senha = String(body.senha ?? '')
     const nomeCompleto = String(body.nome_completo ?? '').trim()
-    const role = body.role === 'admin' ? 'admin' : 'funcionario'
-    // Admin não precisa de depósito; funcionário precisa de um dos valores válidos.
-    const deposito = role === 'admin' ? null : String(body.deposito ?? '')
+    const role = body.role === 'admin' ? 'admin' : body.role === 'lider' ? 'lider' : 'funcionario'
+    // Só funcionário precisa de depósito (admin e líder não separam PVs).
+    const deposito = role === 'funcionario' ? String(body.deposito ?? '') : null
 
     if (!email || !nomeCompleto) {
       return jsonResponse({ erro: 'Preencha e-mail e nome completo.' }, 400)

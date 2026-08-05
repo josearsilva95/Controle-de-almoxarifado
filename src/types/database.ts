@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'funcionario'
+export type Role = 'admin' | 'funcionario' | 'lider'
 
 export type Urgencia = 'urgente' | 'medio' | 'nao_urgente'
 
@@ -15,6 +15,7 @@ export interface Profile {
   email: string | null
   role: Role
   deposito: Deposito | null
+  oculto: boolean
   created_at: string
 }
 

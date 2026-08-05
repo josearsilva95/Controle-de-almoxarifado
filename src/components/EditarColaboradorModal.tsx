@@ -4,9 +4,10 @@ import { FunctionsHttpError } from '@supabase/supabase-js'
 import { Modal } from './ui/Modal'
 import { supabase } from '../lib/supabaseClient'
 import { DEPOSITOS, rotuloDeposito } from '../lib/depositos'
+import { rotuloRole } from '../lib/cores'
 import type { Deposito, Profile, Role } from '../types/database'
 
-const OPCOES_ROLE: Role[] = ['funcionario', 'admin']
+const OPCOES_ROLE: Role[] = ['funcionario', 'lider', 'admin']
 
 interface EditarColaboradorModalProps {
   colaborador: Profile
@@ -118,7 +119,7 @@ export function EditarColaboradorModal({ colaborador, onFechar, onSalvo }: Edita
                 }`}
                 onClick={() => setRole(opcao)}
               >
-                {opcao === 'admin' ? 'Administrador' : 'Almoxarife'}
+                {rotuloRole(opcao)}
               </button>
             ))}
           </div>

@@ -42,7 +42,9 @@ export function rotuloStatus(status: Pedido['status']): string {
 }
 
 export function rotuloRole(role: Role): string {
-  return role === 'admin' ? 'Administrador' : 'Almoxarife'
+  if (role === 'admin') return 'Administrador'
+  if (role === 'lider') return 'Líder'
+  return 'Almoxarife'
 }
 
 export function iniciaisDoNome(nome: string): string {

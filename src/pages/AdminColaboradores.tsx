@@ -10,14 +10,18 @@ import { usePerfis } from '../hooks/usePerfis'
 import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
 import { formatDuracao } from '../lib/tempo'
 import { rotuloDeposito } from '../lib/depositos'
+import { rotuloRole } from '../lib/cores'
 import type { Profile } from '../types/database'
 
 export function AdminColaboradores() {
   const { pedidos, carregando: carregandoPedidos } = usePedidosContext()
   const perfis = usePerfis()
-  const { desempenho, carregando: carregandoDesempenho } = useDesempenhoColaboradores(pedidos)
+  const { desempenho: todoDesempenho, carregando: carregandoDesempenho } = useDesempenhoColaboradores(pedidos)
   const [colaboradorEditando, setColaboradorEditando] = useState<Profile | null>(null)
   const carregando = carregandoPedidos || carregandoDesempenho
+
+  // Contas marcadas como ocultas (ex: usuário master) não aparecem nesta lista.
+  const desempenho = todoDesempenho.filter((d) => !perfis[d.usuarioId]?.oculto)
 
   const maiorTotal = Math.max(
     1,
@@ -49,7 +53,7 @@ export function AdminColaboradores() {
                 <div>
                   <span className="font-semibold text-card-foreground">{colaborador.nome}</span>
                   <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                    {colaborador.role === 'admin' ? 'Admin' : 'Funcionário'}
+                    {rotuloRole(colaborador.role)}
                   </span>
                   {colaborador.role === 'funcionario' && (
                     <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">

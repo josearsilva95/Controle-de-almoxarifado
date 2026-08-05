@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { rotaInicialPara } from '../lib/rotas'
 
 export function Login() {
   const { session, profile, carregando, login } = useAuth()
@@ -11,7 +12,7 @@ export function Login() {
   const [enviando, setEnviando] = useState(false)
 
   if (!carregando && session && profile) {
-    return <Navigate to={profile.role === 'admin' ? '/admin' : '/tarefas'} replace />
+    return <Navigate to={rotaInicialPara(profile.role)} replace />
   }
 
   async function handleSubmit(evento: FormEvent) {

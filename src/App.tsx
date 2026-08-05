@@ -10,6 +10,7 @@ import { AdminColaboradores } from './pages/AdminColaboradores'
 import { AdminNovoColaborador } from './pages/AdminNovoColaborador'
 import { AdminRelatorios } from './pages/AdminRelatorios'
 import { FuncionarioTarefas } from './pages/FuncionarioTarefas'
+import { LiderDesempenho } from './pages/LiderDesempenho'
 
 export function App() {
   return (
@@ -64,6 +65,14 @@ export function App() {
                 element={
                   <RotaProtegida role="funcionario">
                     <FuncionarioTarefas />
+                  </RotaProtegida>
+                }
+              />
+              <Route
+                path="/lider/desempenho"
+                element={
+                  <RotaProtegida role="lider">
+                    <LiderDesempenho />
                   </RotaProtegida>
                 }
               />

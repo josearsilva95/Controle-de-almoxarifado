@@ -6,9 +6,10 @@ import { supabase } from '../lib/supabaseClient'
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
 import { DEPOSITOS, rotuloDeposito } from '../lib/depositos'
+import { rotuloRole } from '../lib/cores'
 import type { Deposito, Role } from '../types/database'
 
-const OPCOES_ROLE: Role[] = ['funcionario', 'admin']
+const OPCOES_ROLE: Role[] = ['funcionario', 'lider', 'admin']
 
 function gerarSenhaAleatoria(): string {
   const alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
@@ -152,7 +153,7 @@ export function AdminNovoColaborador() {
                   }`}
                   onClick={() => setRole(opcao)}
                 >
-                  {opcao === 'admin' ? 'Administrador' : 'Almoxarife'}
+                  {rotuloRole(opcao)}
                 </button>
               ))}
             </div>

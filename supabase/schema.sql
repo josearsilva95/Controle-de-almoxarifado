@@ -10,8 +10,14 @@ create table public.profiles (
   username text not null unique,
   nome_completo text not null,
   email text,
-  role text not null default 'funcionario' check (role in ('admin', 'funcionario')),
+  role text not null default 'funcionario' check (role in ('admin', 'funcionario', 'lider')),
   deposito text check (deposito in ('deposito_1', 'deposito_2', 'deposito_3')),
+  -- Some das listagens de gestão (ex: painel Colaboradores) sem perder acesso —
+  -- usado pra manter o usuário master fora da lista visível.
+  oculto boolean not null default false,
+  -- Enxerga requisições/desempenho de todos os depósitos mesmo sem ser admin —
+  -- concedido manualmente por conta específica (ex: líder de equipe), não por papel.
+  lider_geral boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -107,12 +113,15 @@ create policy profiles_select_autenticados
   to authenticated
   using (true);
 
--- pedidos: admin lê tudo; funcionário só lê requisições do próprio depósito.
+-- pedidos: admin lê tudo; contas com lider_geral (ex: líder de equipe) também
+-- leem tudo, independente de depósito; demais funcionários só leem requisições
+-- do próprio depósito.
 create policy pedidos_select_por_deposito
   on public.pedidos for select
   to authenticated
   using (
     public.is_admin()
+    or coalesce((select lider_geral from public.profiles where id = auth.uid()), false)
     or deposito = (select deposito from public.profiles where id = auth.uid())
   );
 
@@ -180,7 +189,12 @@ alter publication supabase_realtime add table public.pedido_sessoes;
 -- 2. Table Editor -> profiles -> Insert row (ou INSERT via SQL Editor): para cada
 --    usuário criado no passo 1, inserir uma linha com o mesmo id (uuid do usuário
 --    em Authentication -> Users), um username (apelido interno, só exibido na UI),
---    nome_completo, role ('admin' ou 'funcionario') e, se for funcionário, o
---    deposito ('deposito_1'/'deposito_2'/'deposito_3') — ele só vê as requisições
---    do próprio depósito. Admin não precisa de depósito (fica null).
+--    nome_completo, role ('admin', 'funcionario' ou 'lider') e, se for funcionário,
+--    o deposito ('deposito_1'/'deposito_2'/'deposito_3') — ele só vê as requisições
+--    do próprio depósito. Admin e líder não precisam de depósito (fica null).
+-- 3. Para dar a uma conta específica visão de todos os depósitos sem ser admin
+--    (ex: um líder de equipe), rode:
+--      update public.profiles set lider_geral = true where email = '...';
+--    Para tirar uma conta da listagem de gestão (ex: usuário master):
+--      update public.profiles set oculto = true where email = '...';
 -- ============================================================

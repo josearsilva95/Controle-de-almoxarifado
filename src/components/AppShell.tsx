@@ -58,6 +58,16 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="hidden md:inline">Minhas Requisições</span>
             </NavLink>
           )}
+          {profile.role === 'lider' && (
+            <NavLink
+              to="/lider/desempenho"
+              className={({ isActive }) => itemClasse(isActive)}
+              title="Desempenho"
+            >
+              <BarChart3 className="h-4 w-4 shrink-0" />
+              <span className="hidden md:inline">Desempenho</span>
+            </NavLink>
+          )}
         </nav>
       </aside>
 
