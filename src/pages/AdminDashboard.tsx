@@ -72,7 +72,7 @@ export function AdminDashboard() {
                 <th className="px-3 py-2.5">Cadastrada em</th>
                 <th className="px-3 py-2.5">Iniciada em / por</th>
                 <th className="px-3 py-2.5">Finalizada em / por</th>
-                <th className="px-3 py-2.5">Entregue em / por</th>
+                <th className="px-3 py-2.5">Entrega</th>
                 <th className="px-3 py-2.5 text-right">Ações</th>
               </tr>
             </thead>
@@ -112,9 +112,17 @@ export function AdminDashboard() {
                         : '—'}
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground">
-                      {pedido.entregue_em
-                        ? `${formatDataHora(pedido.entregue_em)} · ${nomeDe(pedido.entregue_por)}`
-                        : '—'}
+                      {pedido.entregue_em ? (
+                        <>
+                          {formatDataHora(pedido.entregue_em)}
+                          <br />
+                          <span className="text-xs">
+                            retirado por {pedido.retirado_por_nome || 'não informado'}
+                          </span>
+                        </>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex justify-end gap-1">

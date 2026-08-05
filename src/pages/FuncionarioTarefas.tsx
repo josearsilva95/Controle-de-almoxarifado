@@ -5,6 +5,7 @@ import { usePerfis } from '../hooks/usePerfis'
 import { PedidoCard } from '../components/PedidoCard'
 import { AppShell } from '../components/AppShell'
 import { PausarModal } from '../components/PausarModal'
+import { EntregarModal } from '../components/EntregarModal'
 import { assumirPedido, finalizarPedido, marcarEntregue, pausarPedido } from '../lib/acoesPedido'
 import type { MotivoPausa, Pedido, Urgencia } from '../types/database'
 
@@ -17,6 +18,7 @@ export function FuncionarioTarefas() {
   const [emProcessamento, setEmProcessamento] = useState<Set<string>>(new Set())
   const [mensagemErro, setMensagemErro] = useState<string | null>(null)
   const [pedidoPausando, setPedidoPausando] = useState<Pedido | null>(null)
+  const [pedidoEntregando, setPedidoEntregando] = useState<Pedido | null>(null)
   const [modoSelecao, setModoSelecao] = useState(false)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
@@ -60,6 +62,13 @@ export function FuncionarioTarefas() {
     const pedido = pedidoPausando
     await executarAcao(pedido, (p, usuarioId) => pausarPedido(p, usuarioId, motivo))
     setPedidoPausando(null)
+  }
+
+  async function confirmarEntrega(nomeRetirou: string) {
+    if (!pedidoEntregando) return
+    const pedido = pedidoEntregando
+    await executarAcao(pedido, (p, usuarioId) => marcarEntregue(p, usuarioId, nomeRetirou))
+    setPedidoEntregando(null)
   }
 
   function toggleSelecao(pedido: Pedido) {
@@ -183,7 +192,7 @@ export function FuncionarioTarefas() {
               onContinuar={(p) => executarAcao(p, assumirPedido)}
               onPausar={(p) => setPedidoPausando(p)}
               onFinalizar={(p) => executarAcao(p, finalizarPedido)}
-              onEntregar={(p) => executarAcao(p, marcarEntregue)}
+              onEntregar={(p) => setPedidoEntregando(p)}
               modoSelecao={modoSelecao}
               selecionado={selecionados.has(pedido.id)}
               onToggleSelecao={toggleSelecao}
@@ -198,6 +207,15 @@ export function FuncionarioTarefas() {
           onFechar={() => setPedidoPausando(null)}
           onEscolher={confirmarPausa}
           processando={emProcessamento.has(pedidoPausando.id)}
+        />
+      )}
+
+      {pedidoEntregando && (
+        <EntregarModal
+          pedido={pedidoEntregando}
+          onFechar={() => setPedidoEntregando(null)}
+          onConfirmar={confirmarEntrega}
+          processando={emProcessamento.has(pedidoEntregando.id)}
         />
       )}
     </AppShell>

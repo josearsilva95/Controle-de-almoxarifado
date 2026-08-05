@@ -101,7 +101,9 @@ export function PedidoCard({
         )}
         {pedido.entregue_em && (
           <div>
-            Entregue em: {formatDataHora(pedido.entregue_em)} por {nomeDe(perfis, pedido.entregue_por)}
+            Entregue em: {formatDataHora(pedido.entregue_em)} · retirado por{' '}
+            {pedido.retirado_por_nome || 'não informado'} · registrado por{' '}
+            {nomeDe(perfis, pedido.entregue_por)}
           </div>
         )}
       </div>

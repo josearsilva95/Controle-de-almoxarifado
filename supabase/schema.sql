@@ -41,6 +41,9 @@ create table public.pedidos (
   -- de retirada em requisições urgentes.
   entregue_em timestamptz,
   entregue_por uuid references public.profiles (id),
+  -- Nome de quem retirou fisicamente (pessoa do cliente, não usuário do sistema)
+  -- informado pelo almoxarife no momento de marcar como entregue.
+  retirado_por_nome text,
   funcionario_atual uuid references public.profiles (id),
   updated_at timestamptz not null default now()
 );
