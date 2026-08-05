@@ -1,11 +1,14 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { CheckCircle2, Clock, ClipboardList, Calendar, AlertTriangle } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
 import { KpiCard } from '../components/ui/KpiCard'
 import { GraficoBarrasHorizontais } from '../components/ui/GraficoBarrasHorizontais'
+import { DetalheColaboradorModal } from '../components/DetalheColaboradorModal'
 import { usePedidosContext } from '../hooks/usePedidosContext'
+import { usePerfis } from '../hooks/usePerfis'
 import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
+import type { DesempenhoColaborador } from '../hooks/useDesempenhoColaboradores'
 import { CORES, rotuloUrgencia } from '../lib/cores'
 import { formatDataHora, formatDuracao } from '../lib/tempo'
 import type { Urgencia } from '../types/database'
@@ -32,7 +35,9 @@ function mesmoDia(a: string, b: string): boolean {
 
 export function AdminRelatorios() {
   const { pedidos, carregando } = usePedidosContext()
+  const perfis = usePerfis()
   const { desempenho } = useDesempenhoColaboradores(pedidos)
+  const [colaboradorSelecionado, setColaboradorSelecionado] = useState<DesempenhoColaborador | null>(null)
 
   const stats = useMemo(() => {
     const agora = new Date()
@@ -97,10 +102,16 @@ export function AdminRelatorios() {
   }))
 
   const itensDesempenho = desempenhoMes.map((item) => ({
+    id: item.usuarioId,
     rotulo: item.nome,
     valor: item.requisicoesFinalizadasMes,
     cor: 'var(--primary)',
   }))
+
+  function abrirDetalheColaborador(usuarioId: string) {
+    const colaborador = desempenhoMes.find((d) => d.usuarioId === usuarioId)
+    if (colaborador) setColaboradorSelecionado(colaborador)
+  }
 
   if (carregando) {
     return (
@@ -137,6 +148,7 @@ export function AdminRelatorios() {
             <GraficoBarrasHorizontais
               itens={itensDesempenho}
               vazio="Nenhum colaborador cadastrado ainda."
+              aoClicarItem={abrirDetalheColaborador}
             />
           </div>
         </Cartao>
@@ -173,6 +185,15 @@ export function AdminRelatorios() {
           </ul>
         )}
       </Cartao>
+
+      {colaboradorSelecionado && (
+        <DetalheColaboradorModal
+          colaborador={colaboradorSelecionado}
+          perfil={perfis[colaboradorSelecionado.usuarioId]}
+          pedidos={pedidos}
+          onFechar={() => setColaboradorSelecionado(null)}
+        />
+      )}
     </AppShell>
   )
 }
