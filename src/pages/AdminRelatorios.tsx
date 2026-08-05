@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, Clock, ClipboardList, Calendar, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, Clock, ClipboardList, Calendar, AlertTriangle, Download } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
 import { KpiCard } from '../components/ui/KpiCard'
@@ -11,6 +11,7 @@ import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
 import type { DesempenhoColaborador } from '../hooks/useDesempenhoColaboradores'
 import { CORES, rotuloUrgencia } from '../lib/cores'
 import { formatDataHora, formatDuracao } from '../lib/tempo'
+import { gerarRelatorioMensalPdf } from '../lib/relatorioPdf'
 import type { Urgencia } from '../types/database'
 
 const URGENCIAS: Urgencia[] = ['urgente', 'medio', 'nao_urgente']
@@ -44,6 +45,7 @@ export function AdminRelatorios() {
     const doMes = pedidos.filter((p) => mesmoMes(p.created_at, agora))
     const finalizados = pedidos.filter((p) => p.status === 'finalizado')
     const finalizadosMes = finalizados.filter((p) => p.finalizado_em && mesmoMes(p.finalizado_em, agora))
+    const entreguesMes = pedidos.filter((p) => p.entregue_em && mesmoMes(p.entregue_em, agora))
 
     const duracoes = finalizados
       .filter((p) => p.iniciado_em && p.finalizado_em)
@@ -56,13 +58,19 @@ export function AdminRelatorios() {
       urgencia,
       total: pedidos.filter((p) => p.urgencia === urgencia).length,
     }))
+    const porUrgenciaMes = URGENCIAS.map((urgencia) => ({
+      urgencia,
+      total: doMes.filter((p) => p.urgencia === urgencia).length,
+    }))
 
     return {
       totalGeral: pedidos.length,
       totalMes: doMes.length,
       finalizadasMes: finalizadosMes.length,
+      entreguesMes: entreguesMes.length,
       tempoMedioSegundos,
       porUrgencia,
+      porUrgenciaMes,
     }
   }, [pedidos])
 
@@ -113,6 +121,33 @@ export function AdminRelatorios() {
     if (colaborador) setColaboradorSelecionado(colaborador)
   }
 
+  function baixarPdfDoMes() {
+    const totalTempoTrabalhado = desempenhoMes.reduce((soma, c) => soma + c.tempoTotalSegundos, 0)
+    const totalFinalizadasEquipe = desempenhoMes.reduce((soma, c) => soma + c.requisicoesFinalizadas, 0)
+    const tempoMedioPorRequisicaoSegundos = totalFinalizadasEquipe
+      ? totalTempoTrabalhado / totalFinalizadasEquipe
+      : 0
+
+    const porUrgenciaMap = Object.fromEntries(stats.porUrgenciaMes.map((u) => [u.urgencia, u.total]))
+
+    gerarRelatorioMensalPdf({
+      mesReferencia: new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+      totalRequisicoes: stats.totalMes,
+      urgentes: porUrgenciaMap.urgente ?? 0,
+      medias: porUrgenciaMap.medio ?? 0,
+      naoUrgentes: porUrgenciaMap.nao_urgente ?? 0,
+      finalizadas: stats.finalizadasMes,
+      entregues: stats.entreguesMes,
+      tempoMedioSeparacaoSegundos: stats.tempoMedioSegundos,
+      tempoMedioPorRequisicaoSegundos,
+      colaboradores: desempenhoMes.map((c) => ({
+        nome: c.nome,
+        finalizadas: c.requisicoesFinalizadasMes,
+        tempoTotalSegundos: c.tempoTotalSegundos,
+      })),
+    })
+  }
+
   if (carregando) {
     return (
       <AppShell>
@@ -123,7 +158,17 @@ export function AdminRelatorios() {
 
   return (
     <AppShell>
-      <h2 className="mb-4 text-lg font-semibold text-foreground">Relatórios</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-foreground">Relatórios</h2>
+        <button
+          type="button"
+          className="flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+          onClick={baixarPdfDoMes}
+        >
+          <Download className="h-4 w-4" />
+          Baixar PDF do mês
+        </button>
+      </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Total de requisições" valor={String(stats.totalGeral)} icone={ClipboardList} />
