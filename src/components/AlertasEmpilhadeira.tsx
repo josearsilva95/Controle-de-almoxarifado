@@ -15,7 +15,7 @@ export function AlertasEmpilhadeira() {
   if (alertas.length === 0) return null
 
   return (
-    <div className="pointer-events-none fixed right-4 top-4 z-50 flex w-72 flex-col gap-2">
+    <div className="pointer-events-none fixed right-4 bottom-4 z-50 flex w-72 flex-col gap-2">
       {alertas.map((pedido) => (
         <div
           key={pedido.id}
