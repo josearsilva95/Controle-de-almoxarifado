@@ -46,7 +46,9 @@ export function LiderDesempenho() {
               <BarraProgresso percent={(colaborador.requisicoesFinalizadas / maiorTotal) * 100} />
               <p className="mt-1.5 text-xs text-muted-foreground">
                 {colaborador.requisicoesFinalizadasMes} finalizada
-                {colaborador.requisicoesFinalizadasMes === 1 ? '' : 's'} este mês
+                {colaborador.requisicoesFinalizadasMes === 1 ? '' : 's'} este mês · média de{' '}
+                {formatDuracao(colaborador.tempoMedioPorRequisicaoSegundos)} por requisição · tempo ocioso:{' '}
+                {formatDuracao(colaborador.tempoOciosoSegundos)}
               </p>
             </Cartao>
           ))}

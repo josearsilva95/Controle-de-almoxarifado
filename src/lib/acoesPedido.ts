@@ -116,3 +116,17 @@ export async function finalizarPedido(pedido: Pedido, usuarioId: string): Promis
   if (error) return { erro: `Não foi possível finalizar: ${error.message}` }
   return { erro: null }
 }
+
+/**
+ * Marca a retirada pelo cliente. Não afeta status/contagem (a PV já conta como
+ * finalizada desde finalizarPedido) — só registra quando ela deixou de fato
+ * o almoxarifado, usado para medir atraso de retirada em pedidos urgentes.
+ */
+export async function marcarEntregue(pedido: Pedido, usuarioId: string): Promise<Resultado> {
+  const { error } = await supabase
+    .from('pedidos')
+    .update({ entregue_em: new Date().toISOString(), entregue_por: usuarioId })
+    .eq('id', pedido.id)
+  if (error) return { erro: `Não foi possível marcar como entregue: ${error.message}` }
+  return { erro: null }
+}

@@ -36,6 +36,11 @@ create table public.pedidos (
   iniciado_por uuid references public.profiles (id),
   finalizado_em timestamptz,
   finalizado_por uuid references public.profiles (id),
+  -- Separação concluída (finalizado_em) já conta nas estatísticas; entregue_em
+  -- só é preenchido quando o cliente retira de fato — usado para medir atraso
+  -- de retirada em requisições urgentes.
+  entregue_em timestamptz,
+  entregue_por uuid references public.profiles (id),
   funcionario_atual uuid references public.profiles (id),
   updated_at timestamptz not null default now()
 );

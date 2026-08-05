@@ -72,6 +72,7 @@ export function AdminDashboard() {
                 <th className="px-3 py-2.5">Cadastrada em</th>
                 <th className="px-3 py-2.5">Iniciada em / por</th>
                 <th className="px-3 py-2.5">Finalizada em / por</th>
+                <th className="px-3 py-2.5">Entregue em / por</th>
                 <th className="px-3 py-2.5 text-right">Ações</th>
               </tr>
             </thead>
@@ -110,6 +111,11 @@ export function AdminDashboard() {
                         ? `${formatDataHora(pedido.finalizado_em)} · ${nomeDe(pedido.finalizado_por)}`
                         : '—'}
                     </td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
+                      {pedido.entregue_em
+                        ? `${formatDataHora(pedido.entregue_em)} · ${nomeDe(pedido.entregue_por)}`
+                        : '—'}
+                    </td>
                     <td className="px-3 py-2.5">
                       <div className="flex justify-end gap-1">
                         <button
@@ -135,7 +141,7 @@ export function AdminDashboard() {
                   </tr>
                   {pedidoExpandido === pedido.id && (
                     <tr className="border-t border-border bg-muted/20">
-                      <td colSpan={10} className="px-4 py-3">
+                      <td colSpan={11} className="px-4 py-3">
                         <SessoesTimeline sessoes={sessoes} perfis={perfis} />
                       </td>
                     </tr>

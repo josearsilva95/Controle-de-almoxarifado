@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CheckCircle2, Clock, ClipboardList, Calendar } from 'lucide-react'
+import { CheckCircle2, Clock, ClipboardList, Calendar, AlertTriangle } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
 import { KpiCard } from '../components/ui/KpiCard'
@@ -7,7 +7,7 @@ import { GraficoBarrasHorizontais } from '../components/ui/GraficoBarrasHorizont
 import { usePedidosContext } from '../hooks/usePedidosContext'
 import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
 import { CORES, rotuloUrgencia } from '../lib/cores'
-import { formatDuracao } from '../lib/tempo'
+import { formatDataHora, formatDuracao } from '../lib/tempo'
 import type { Urgencia } from '../types/database'
 
 const URGENCIAS: Urgencia[] = ['urgente', 'medio', 'nao_urgente']
@@ -24,6 +24,10 @@ const COR_BARRA_URGENCIA: Record<Urgencia, string> = {
 function mesmoMes(iso: string, agora: Date): boolean {
   const data = new Date(iso)
   return data.getFullYear() === agora.getFullYear() && data.getMonth() === agora.getMonth()
+}
+
+function mesmoDia(a: string, b: string): boolean {
+  return new Date(a).toDateString() === new Date(b).toDateString()
 }
 
 export function AdminRelatorios() {
@@ -64,6 +68,27 @@ export function AdminRelatorios() {
         .sort((a, b) => b.requisicoesFinalizadasMes - a.requisicoesFinalizadasMes),
     [desempenho]
   )
+
+  // Urgente + almoxarifado separou no mesmo dia (cumpriu o prazo) + cliente não
+  // retirou no mesmo dia (ou ainda nem retirou) — atraso é do lado de quem busca,
+  // não da separação, mas vale marcar quanto tempo ficou esperando.
+  const urgentesNaoRetiradas = useMemo(() => {
+    const agora = Date.now()
+    return pedidos
+      .filter((p) => {
+        if (p.urgencia !== 'urgente' || !p.finalizado_em) return false
+        if (!mesmoDia(p.created_at, p.finalizado_em)) return false
+        if (!p.entregue_em) return true
+        return !mesmoDia(p.finalizado_em, p.entregue_em)
+      })
+      .map((p) => ({
+        pedido: p,
+        segundosEsperando:
+          ((p.entregue_em ? new Date(p.entregue_em).getTime() : agora) - new Date(p.finalizado_em!).getTime()) /
+          1000,
+      }))
+      .sort((a, b) => b.segundosEsperando - a.segundosEsperando)
+  }, [pedidos])
 
   const itensUrgencia = stats.porUrgencia.map((item) => ({
     rotulo: rotuloUrgencia(item.urgencia),
@@ -116,6 +141,38 @@ export function AdminRelatorios() {
           </div>
         </Cartao>
       </div>
+
+      <Cartao className="mt-4">
+        <div className="mb-1 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-destructive" />
+          <h3 className="text-base font-semibold text-card-foreground">
+            Urgentes separadas mas não retiradas no mesmo dia
+          </h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          O almoxarifado separou no mesmo dia da requisição — o atraso aqui é da retirada, não da separação.
+        </p>
+        {urgentesNaoRetiradas.length === 0 ? (
+          <p className="py-4 text-sm text-muted-foreground">Nenhum caso no momento.</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-border text-sm">
+            {urgentesNaoRetiradas.map(({ pedido, segundosEsperando }) => (
+              <li key={pedido.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <div>
+                  <span className="font-medium text-card-foreground">#{pedido.numero_pv}</span>{' '}
+                  <span className="text-muted-foreground">{pedido.cliente}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    separada em {formatDataHora(pedido.finalizado_em!)}
+                  </span>
+                </div>
+                <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-semibold text-destructive">
+                  {pedido.entregue_em ? `demorou ${formatDuracao(segundosEsperando)} para retirar` : `esperando há ${formatDuracao(segundosEsperando)}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Cartao>
     </AppShell>
   )
 }

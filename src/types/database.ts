@@ -34,6 +34,8 @@ export interface Pedido {
   iniciado_por: string | null
   finalizado_em: string | null
   finalizado_por: string | null
+  entregue_em: string | null
+  entregue_por: string | null
   funcionario_atual: string | null
   updated_at: string
 }

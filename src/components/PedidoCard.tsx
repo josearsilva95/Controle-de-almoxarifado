@@ -15,6 +15,7 @@ interface PedidoCardProps {
   onPausar: (pedido: Pedido) => void
   onContinuar: (pedido: Pedido) => void
   onFinalizar: (pedido: Pedido) => void
+  onEntregar: (pedido: Pedido) => void
   modoSelecao?: boolean
   selecionado?: boolean
   onToggleSelecao?: (pedido: Pedido) => void
@@ -39,6 +40,7 @@ export function PedidoCard({
   onPausar,
   onContinuar,
   onFinalizar,
+  onEntregar,
   modoSelecao = false,
   selecionado = false,
   onToggleSelecao,
@@ -97,6 +99,11 @@ export function PedidoCard({
             {nomeDe(perfis, pedido.finalizado_por)}
           </div>
         )}
+        {pedido.entregue_em && (
+          <div>
+            Entregue em: {formatDataHora(pedido.entregue_em)} por {nomeDe(perfis, pedido.entregue_por)}
+          </div>
+        )}
       </div>
       {!modoSelecao && (
         <div className="flex flex-wrap items-center gap-2">
@@ -123,6 +130,11 @@ export function PedidoCard({
           {pedido.status === 'pausado' && (
             <button className={botaoPrimario} onClick={() => onContinuar(pedido)} disabled={processando}>
               Continuar
+            </button>
+          )}
+          {pedido.status === 'finalizado' && !pedido.entregue_em && (
+            <button className={botaoPrimario} onClick={() => onEntregar(pedido)} disabled={processando}>
+              Marcar como entregue
             </button>
           )}
         </div>

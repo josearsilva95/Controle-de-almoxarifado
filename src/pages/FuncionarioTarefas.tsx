@@ -5,7 +5,7 @@ import { usePerfis } from '../hooks/usePerfis'
 import { PedidoCard } from '../components/PedidoCard'
 import { AppShell } from '../components/AppShell'
 import { PausarModal } from '../components/PausarModal'
-import { assumirPedido, finalizarPedido, pausarPedido } from '../lib/acoesPedido'
+import { assumirPedido, finalizarPedido, marcarEntregue, pausarPedido } from '../lib/acoesPedido'
 import type { MotivoPausa, Pedido, Urgencia } from '../types/database'
 
 const RANK_URGENCIA: Record<Urgencia, number> = { urgente: 0, medio: 1, nao_urgente: 2 }
@@ -22,8 +22,14 @@ export function FuncionarioTarefas() {
 
   const pedidosVisiveis = useMemo(() => {
     return pedidos
-      .filter((p) => p.status !== 'finalizado')
+      // Finalizada só sai da lista depois de marcada como entregue.
+      .filter((p) => p.status !== 'finalizado' || !p.entregue_em)
       .sort((a, b) => {
+        // Aguardando retirada sempre por último — o que ainda precisa ser
+        // separado tem prioridade visual sobre o que só falta o cliente buscar.
+        const aAguardando = a.status === 'finalizado'
+        const bAguardando = b.status === 'finalizado'
+        if (aAguardando !== bAguardando) return aAguardando ? 1 : -1
         const porUrgencia = RANK_URGENCIA[a.urgencia] - RANK_URGENCIA[b.urgencia]
         if (porUrgencia !== 0) return porUrgencia
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -177,6 +183,7 @@ export function FuncionarioTarefas() {
               onContinuar={(p) => executarAcao(p, assumirPedido)}
               onPausar={(p) => setPedidoPausando(p)}
               onFinalizar={(p) => executarAcao(p, finalizarPedido)}
+              onEntregar={(p) => executarAcao(p, marcarEntregue)}
               modoSelecao={modoSelecao}
               selecionado={selecionados.has(pedido.id)}
               onToggleSelecao={toggleSelecao}
