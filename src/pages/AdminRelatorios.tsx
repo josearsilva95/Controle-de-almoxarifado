@@ -5,6 +5,7 @@ import { Cartao } from '../components/ui/Cartao'
 import { KpiCard } from '../components/ui/KpiCard'
 import { GraficoBarrasHorizontais } from '../components/ui/GraficoBarrasHorizontais'
 import { DetalheColaboradorModal } from '../components/DetalheColaboradorModal'
+import { Botao } from '../components/ui/Botao'
 import { usePedidosContext } from '../hooks/usePedidosContext'
 import { usePerfis } from '../hooks/usePerfis'
 import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
@@ -160,14 +161,10 @@ export function AdminRelatorios() {
     <AppShell>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-foreground">Relatórios</h2>
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
-          onClick={baixarPdfDoMes}
-        >
+        <Botao tamanho="sm" onClick={baixarPdfDoMes}>
           <Download className="h-4 w-4" />
           Baixar PDF do mês
-        </button>
+        </Botao>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

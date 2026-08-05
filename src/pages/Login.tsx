@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { rotaInicialPara } from '../lib/rotas'
+import { Botao } from '../components/ui/Botao'
 
 export function Login() {
   const { session, profile, carregando, login } = useAuth()
@@ -55,13 +56,9 @@ export function Login() {
           />
         </label>
         {erro && <p className="mb-3.5 text-sm text-destructive">{erro}</p>}
-        <button
-          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
-          type="submit"
-          disabled={enviando}
-        >
+        <Botao className="w-full" type="submit" disabled={enviando}>
           {enviando ? 'Entrando...' : 'Entrar'}
-        </button>
+        </Botao>
       </form>
     </div>
   )

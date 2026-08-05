@@ -10,6 +10,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { SessoesTimeline } from '../components/SessoesTimeline'
 import { AppShell } from '../components/AppShell'
 import { EditarRequisicaoModal } from '../components/EditarRequisicaoModal'
+import { classesBotaoIcone } from '../components/ui/Botao'
 import { supabase } from '../lib/supabaseClient'
 import { formatDataHora } from '../lib/tempo'
 import { rotuloDeposito } from '../lib/depositos'
@@ -128,7 +129,7 @@ export function AdminDashboard() {
                       <div className="flex justify-end gap-1">
                         <button
                           type="button"
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-card-foreground"
+                          className={classesBotaoIcone()}
                           onClick={(e) => abrirEdicao(pedido, e)}
                           aria-label={`Editar requisição ${pedido.numero_pv}`}
                           title="Editar"
@@ -137,7 +138,7 @@ export function AdminDashboard() {
                         </button>
                         <button
                           type="button"
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          className={classesBotaoIcone(true)}
                           onClick={(e) => excluirPedido(pedido, e)}
                           aria-label={`Excluir requisição ${pedido.numero_pv}`}
                           title="Excluir"

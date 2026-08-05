@@ -7,6 +7,8 @@ import { CORES, rotuloUrgencia } from '../lib/cores'
 import { DEPOSITOS, rotuloDeposito } from '../lib/depositos'
 import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
+import { Botao } from '../components/ui/Botao'
+import { classesBotaoSegmento, classesBotaoSegmentoCor } from '../components/ui/BotaoSegmento'
 import type { Deposito, Urgencia } from '../types/database'
 
 const OPCOES_URGENCIA: Urgencia[] = ['urgente', 'medio', 'nao_urgente']
@@ -113,9 +115,7 @@ export function AdminCadastrarPV() {
                 <button
                   key={opcao}
                   type="button"
-                  className={`flex-1 rounded-md border-2 px-2 py-2.5 text-center text-xs font-semibold text-foreground transition-colors ${
-                    deposito === opcao ? 'border-primary bg-primary/10' : 'border-border'
-                  }`}
+                  className={classesBotaoSegmento(deposito === opcao, 'compacto')}
                   onClick={() => setDeposito(opcao)}
                 >
                   {rotuloDeposito(opcao)}
@@ -131,9 +131,7 @@ export function AdminCadastrarPV() {
                 <button
                   key={opcao}
                   type="button"
-                  className={`flex-1 rounded-md border-2 px-2 py-2.5 text-center text-xs font-semibold text-foreground transition-colors ${
-                    urgencia === opcao ? 'border-primary ring-2 ring-ring/30' : 'border-border'
-                  }`}
+                  className={classesBotaoSegmentoCor(urgencia === opcao)}
                   style={{
                     background: opcao === 'nao_urgente' ? CORES.nao_urgente : `${CORES[opcao]}22`,
                   }}
@@ -148,13 +146,9 @@ export function AdminCadastrarPV() {
           {erro && <p className="mb-3.5 text-sm text-destructive">{erro}</p>}
           {sucesso && <p className="mb-3.5 text-sm text-green-600">{sucesso}</p>}
 
-          <button
-            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
-            type="submit"
-            disabled={enviando}
-          >
+          <Botao className="w-full" type="submit" disabled={enviando}>
             {enviando ? 'Cadastrando...' : 'Cadastrar Requisição'}
-          </button>
+          </Botao>
         </form>
       </Cartao>
     </AppShell>

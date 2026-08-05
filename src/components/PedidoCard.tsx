@@ -4,6 +4,7 @@ import { rotuloDeposito } from '../lib/depositos'
 import { rotuloMotivoPausa } from '../lib/motivosPausa'
 import { StatusBadge } from './StatusBadge'
 import { UrgenciaBadge } from './UrgenciaBadge'
+import { Botao } from './ui/Botao'
 import type { Pedido, Profile } from '../types/database'
 
 interface PedidoCardProps {
@@ -25,11 +26,6 @@ function nomeDe(perfis: Record<string, Profile>, id: string | null): string {
   if (!id) return '—'
   return perfis[id]?.nome_completo ?? 'Desconhecido'
 }
-
-const botaoPrimario =
-  'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50'
-const botaoSecundario =
-  'rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-card-foreground transition-colors hover:bg-muted disabled:opacity-50'
 
 export function PedidoCard({
   pedido,
@@ -110,18 +106,18 @@ export function PedidoCard({
       {!modoSelecao && (
         <div className="flex flex-wrap items-center gap-2">
           {pedido.status === 'pendente' && (
-            <button className={botaoPrimario} onClick={() => onIniciar(pedido)} disabled={processando}>
+            <Botao tamanho="sm" onClick={() => onIniciar(pedido)} disabled={processando}>
               Iniciar
-            </button>
+            </Botao>
           )}
           {pedido.status === 'em_andamento' && souEuQueEstouTrabalhando && (
             <>
-              <button className={botaoSecundario} onClick={() => onPausar(pedido)} disabled={processando}>
+              <Botao variante="secundaria" tamanho="sm" onClick={() => onPausar(pedido)} disabled={processando}>
                 Pausar
-              </button>
-              <button className={botaoPrimario} onClick={() => onFinalizar(pedido)} disabled={processando}>
+              </Botao>
+              <Botao tamanho="sm" onClick={() => onFinalizar(pedido)} disabled={processando}>
                 Finalizar
-              </button>
+              </Botao>
             </>
           )}
           {pedido.status === 'em_andamento' && !souEuQueEstouTrabalhando && (
@@ -130,14 +126,14 @@ export function PedidoCard({
             </span>
           )}
           {pedido.status === 'pausado' && (
-            <button className={botaoPrimario} onClick={() => onContinuar(pedido)} disabled={processando}>
+            <Botao tamanho="sm" onClick={() => onContinuar(pedido)} disabled={processando}>
               Continuar
-            </button>
+            </Botao>
           )}
           {pedido.status === 'finalizado' && !pedido.entregue_em && (
-            <button className={botaoPrimario} onClick={() => onEntregar(pedido)} disabled={processando}>
+            <Botao tamanho="sm" onClick={() => onEntregar(pedido)} disabled={processando}>
               Marcar como entregue
-            </button>
+            </Botao>
           )}
         </div>
       )}

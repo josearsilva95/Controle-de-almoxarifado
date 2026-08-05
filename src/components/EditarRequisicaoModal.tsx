@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Modal } from './ui/Modal'
+import { Botao } from './ui/Botao'
+import { classesBotaoSegmento, classesBotaoSegmentoCor } from './ui/BotaoSegmento'
 import { supabase } from '../lib/supabaseClient'
 import { CORES, rotuloUrgencia } from '../lib/cores'
 import { DEPOSITOS, rotuloDeposito } from '../lib/depositos'
@@ -100,9 +102,7 @@ export function EditarRequisicaoModal({ pedido, onFechar, onSalvo }: EditarRequi
               <button
                 key={opcao}
                 type="button"
-                className={`flex-1 rounded-md border-2 px-2 py-2.5 text-center text-xs font-semibold text-foreground transition-colors ${
-                  deposito === opcao ? 'border-primary bg-primary/10' : 'border-border'
-                }`}
+                className={classesBotaoSegmento(deposito === opcao, 'compacto')}
                 onClick={() => setDeposito(opcao)}
               >
                 {rotuloDeposito(opcao)}
@@ -118,9 +118,7 @@ export function EditarRequisicaoModal({ pedido, onFechar, onSalvo }: EditarRequi
               <button
                 key={opcao}
                 type="button"
-                className={`flex-1 rounded-md border-2 px-2 py-2.5 text-center text-xs font-semibold text-foreground transition-colors ${
-                  urgencia === opcao ? 'border-primary ring-2 ring-ring/30' : 'border-border'
-                }`}
+                className={classesBotaoSegmentoCor(urgencia === opcao)}
                 style={{ background: opcao === 'nao_urgente' ? CORES.nao_urgente : `${CORES[opcao]}22` }}
                 onClick={() => setUrgencia(opcao)}
               >
@@ -133,20 +131,12 @@ export function EditarRequisicaoModal({ pedido, onFechar, onSalvo }: EditarRequi
         {erro && <p className="mb-3.5 text-sm text-destructive">{erro}</p>}
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground hover:bg-muted"
-            onClick={onFechar}
-          >
+          <Botao type="button" variante="secundaria" onClick={onFechar}>
             Cancelar
-          </button>
-          <button
-            type="submit"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
-            disabled={salvando}
-          >
+          </Botao>
+          <Botao type="submit" disabled={salvando}>
             {salvando ? 'Salvando...' : 'Salvar'}
-          </button>
+          </Botao>
         </div>
       </form>
     </Modal>

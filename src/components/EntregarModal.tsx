@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Modal } from './ui/Modal'
+import { Botao } from './ui/Botao'
 import type { Pedido } from '../types/database'
 
 interface EntregarModalProps {
@@ -34,20 +35,12 @@ export function EntregarModal({ pedido, onFechar, onConfirmar, processando }: En
         </label>
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground hover:bg-muted"
-            onClick={onFechar}
-          >
+          <Botao type="button" variante="secundaria" onClick={onFechar}>
             Cancelar
-          </button>
-          <button
-            type="submit"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
-            disabled={processando}
-          >
+          </Botao>
+          <Botao type="submit" disabled={processando}>
             {processando ? 'Salvando...' : 'Confirmar entrega'}
-          </button>
+          </Botao>
         </div>
       </form>
     </Modal>

@@ -4,6 +4,7 @@ import { BarChart3, ClipboardList, Package, Users } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { iniciaisDoNome, rotuloRole } from '../lib/cores'
 import { AlertasEmpilhadeira } from './AlertasEmpilhadeira'
+import { Botao, classesBotao } from './ui/Botao'
 
 const LINKS_ADMIN = [
   { to: '/admin', label: 'Requisições', icon: ClipboardList, fim: true },
@@ -74,10 +75,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-end gap-3 border-b border-border bg-card px-6 py-3">
           {profile.role === 'admin' && (
-            <Link
-              to="/admin/nova-requisicao"
-              className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
-            >
+            <Link to="/admin/nova-requisicao" className={classesBotao('primaria', 'sm')}>
               + Nova Requisição
             </Link>
           )}
@@ -90,12 +88,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               <p className="text-xs text-muted-foreground">{rotuloRole(profile.role)}</p>
             </div>
           </div>
-          <button
-            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-card-foreground hover:bg-muted"
-            onClick={logout}
-          >
+          <Botao variante="secundaria" tamanho="sm" onClick={logout}>
             Sair
-          </button>
+          </Botao>
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-6">{children}</main>

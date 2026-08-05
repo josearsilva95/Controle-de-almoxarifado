@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import { X } from 'lucide-react'
+import { classesBotaoIcone } from './Botao'
 
 interface ModalProps {
   titulo: string
@@ -13,18 +15,18 @@ export function Modal({ titulo, onFechar, children }: ModalProps) {
       onClick={onFechar}
     >
       <div
-        className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg"
+        className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-card-foreground">{titulo}</h2>
           <button
             type="button"
-            className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted"
+            className={classesBotaoIcone()}
             onClick={onFechar}
             aria-label="Fechar"
           >
-            ✕
+            <X className="h-4 w-4" />
           </button>
         </div>
         {children}

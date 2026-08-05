@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { classesBotao } from './ui/Botao'
 
 interface Props {
   children: ReactNode
@@ -29,10 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="mb-4 text-sm text-muted-foreground">
               Ocorreu um erro inesperado nesta tela. Tente recarregar a página.
             </p>
-            <button
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-              onClick={() => window.location.reload()}
-            >
+            <button className={classesBotao()} onClick={() => window.location.reload()}>
               Recarregar
             </button>
           </div>

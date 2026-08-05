@@ -6,6 +6,7 @@ import { PedidoCard } from '../components/PedidoCard'
 import { AppShell } from '../components/AppShell'
 import { PausarModal } from '../components/PausarModal'
 import { EntregarModal } from '../components/EntregarModal'
+import { Botao } from '../components/ui/Botao'
 import { assumirPedido, finalizarPedido, marcarEntregue, pausarPedido } from '../lib/acoesPedido'
 import type { MotivoPausa, Pedido, Urgencia } from '../types/database'
 
@@ -132,32 +133,23 @@ export function FuncionarioTarefas() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-foreground">Minhas Requisições</h2>
         {!modoSelecao ? (
-          <button
-            type="button"
-            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-card-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          <Botao
+            variante="secundaria"
+            tamanho="sm"
             onClick={() => setModoSelecao(true)}
             disabled={pendentesDisponiveis.length === 0}
           >
             Selecionar várias
-          </button>
+          </Botao>
         ) : (
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">{selecionados.size} selecionada(s)</span>
-            <button
-              type="button"
-              className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-card-foreground hover:bg-muted"
-              onClick={cancelarSelecao}
-            >
+            <Botao variante="secundaria" tamanho="sm" onClick={cancelarSelecao}>
               Cancelar
-            </button>
-            <button
-              type="button"
-              className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
-              onClick={iniciarSelecionadas}
-              disabled={selecionados.size === 0}
-            >
+            </Botao>
+            <Botao tamanho="sm" onClick={iniciarSelecionadas} disabled={selecionados.size === 0}>
               Iniciar {selecionados.size > 0 ? selecionados.size : ''} requisiç{selecionados.size === 1 ? 'ão' : 'ões'}
-            </button>
+            </Botao>
           </div>
         )}
       </div>

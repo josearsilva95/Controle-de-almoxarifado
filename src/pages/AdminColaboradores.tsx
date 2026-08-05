@@ -5,6 +5,7 @@ import { AppShell } from '../components/AppShell'
 import { Cartao } from '../components/ui/Cartao'
 import { BarraProgresso } from '../components/ui/BarraProgresso'
 import { EditarColaboradorModal } from '../components/EditarColaboradorModal'
+import { classesBotao, classesBotaoIcone } from '../components/ui/Botao'
 import { usePedidosContext } from '../hooks/usePedidosContext'
 import { usePerfis } from '../hooks/usePerfis'
 import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
@@ -32,10 +33,7 @@ export function AdminColaboradores() {
     <AppShell>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-foreground">Colaboradores</h2>
-        <Link
-          to="/admin/novo-colaborador"
-          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
-        >
+        <Link to="/admin/novo-colaborador" className={classesBotao('primaria', 'sm')}>
           + Novo Colaborador
         </Link>
       </div>
@@ -69,7 +67,7 @@ export function AdminColaboradores() {
                   )}
                   <button
                     type="button"
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-card-foreground"
+                    className={classesBotaoIcone()}
                     onClick={() => {
                       const perfil = perfis[colaborador.usuarioId]
                       if (perfil) setColaboradorEditando(perfil)

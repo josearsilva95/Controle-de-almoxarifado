@@ -1,4 +1,5 @@
 import { Modal } from './ui/Modal'
+import { Botao } from './ui/Botao'
 import { formatDataHora, formatDuracao } from '../lib/tempo'
 import { rotuloDeposito } from '../lib/depositos'
 import { rotuloRole } from '../lib/cores'
@@ -71,13 +72,9 @@ export function DetalheColaboradorModal({ colaborador, perfil, pedidos, onFechar
       )}
 
       <div className="mt-5 flex justify-end">
-        <button
-          type="button"
-          className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground hover:bg-muted"
-          onClick={onFechar}
-        >
+        <Botao type="button" variante="secundaria" onClick={onFechar}>
           Fechar
-        </button>
+        </Botao>
       </div>
     </Modal>
   )

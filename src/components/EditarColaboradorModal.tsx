@@ -2,6 +2,8 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { Modal } from './ui/Modal'
+import { Botao } from './ui/Botao'
+import { classesBotaoSegmento } from './ui/BotaoSegmento'
 import { supabase } from '../lib/supabaseClient'
 import { DEPOSITOS, rotuloDeposito } from '../lib/depositos'
 import { rotuloRole } from '../lib/cores'
@@ -112,11 +114,7 @@ export function EditarColaboradorModal({ colaborador, onFechar, onSalvo }: Edita
               <button
                 key={opcao}
                 type="button"
-                className={`flex-1 rounded-md border-2 px-3 py-2 text-sm font-medium transition-colors ${
-                  role === opcao
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border text-muted-foreground'
-                }`}
+                className={classesBotaoSegmento(role === opcao)}
                 onClick={() => setRole(opcao)}
               >
                 {rotuloRole(opcao)}
@@ -133,9 +131,7 @@ export function EditarColaboradorModal({ colaborador, onFechar, onSalvo }: Edita
                 <button
                   key={opcao}
                   type="button"
-                  className={`flex-1 rounded-md border-2 px-2 py-2.5 text-center text-xs font-semibold text-foreground transition-colors ${
-                    deposito === opcao ? 'border-primary bg-primary/10' : 'border-border'
-                  }`}
+                  className={classesBotaoSegmento(deposito === opcao, 'compacto')}
                   onClick={() => setDeposito(opcao)}
                 >
                   {rotuloDeposito(opcao)}
@@ -148,20 +144,12 @@ export function EditarColaboradorModal({ colaborador, onFechar, onSalvo }: Edita
         {erro && <p className="mb-3.5 text-sm text-destructive">{erro}</p>}
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground hover:bg-muted"
-            onClick={onFechar}
-          >
+          <Botao type="button" variante="secundaria" onClick={onFechar}>
             Cancelar
-          </button>
-          <button
-            type="submit"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
-            disabled={salvando}
-          >
+          </Botao>
+          <Botao type="submit" disabled={salvando}>
             {salvando ? 'Salvando...' : 'Salvar'}
-          </button>
+          </Botao>
         </div>
       </form>
     </Modal>
