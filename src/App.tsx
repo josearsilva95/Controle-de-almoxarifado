@@ -1,6 +1,7 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { RotaProtegida } from './auth/RotaProtegida'
+import { RotaAdmin } from './auth/RotaAdmin'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { PedidosProvider } from './hooks/PedidosProvider'
 import { Login } from './pages/Login'
@@ -10,7 +11,6 @@ import { AdminColaboradores } from './pages/AdminColaboradores'
 import { AdminNovoColaborador } from './pages/AdminNovoColaborador'
 import { AdminRelatorios } from './pages/AdminRelatorios'
 import { FuncionarioTarefas } from './pages/FuncionarioTarefas'
-import { LiderDesempenho } from './pages/LiderDesempenho'
 
 export function App() {
   return (
@@ -23,41 +23,41 @@ export function App() {
               <Route
                 path="/admin"
                 element={
-                  <RotaProtegida role="admin">
+                  <RotaAdmin>
                     <AdminDashboard />
-                  </RotaProtegida>
+                  </RotaAdmin>
                 }
               />
               <Route
                 path="/admin/nova-requisicao"
                 element={
-                  <RotaProtegida role="admin">
+                  <RotaAdmin>
                     <AdminCadastrarPV />
-                  </RotaProtegida>
+                  </RotaAdmin>
                 }
               />
               <Route
                 path="/admin/colaboradores"
                 element={
-                  <RotaProtegida role="admin">
+                  <RotaAdmin>
                     <AdminColaboradores />
-                  </RotaProtegida>
+                  </RotaAdmin>
                 }
               />
               <Route
                 path="/admin/novo-colaborador"
                 element={
-                  <RotaProtegida role="admin">
+                  <RotaAdmin>
                     <AdminNovoColaborador />
-                  </RotaProtegida>
+                  </RotaAdmin>
                 }
               />
               <Route
                 path="/admin/relatorios"
                 element={
-                  <RotaProtegida role="admin">
+                  <RotaAdmin>
                     <AdminRelatorios />
-                  </RotaProtegida>
+                  </RotaAdmin>
                 }
               />
               <Route
@@ -65,14 +65,6 @@ export function App() {
                 element={
                   <RotaProtegida role="funcionario">
                     <FuncionarioTarefas />
-                  </RotaProtegida>
-                }
-              />
-              <Route
-                path="/lider/desempenho"
-                element={
-                  <RotaProtegida role="lider">
-                    <LiderDesempenho />
                   </RotaProtegida>
                 }
               />

@@ -13,7 +13,7 @@ export function Login() {
   const [enviando, setEnviando] = useState(false)
 
   if (!carregando && session && profile) {
-    return <Navigate to={rotaInicialPara(profile.role)} replace />
+    return <Navigate to={rotaInicialPara(profile)} replace />
   }
 
   async function handleSubmit(evento: FormEvent) {

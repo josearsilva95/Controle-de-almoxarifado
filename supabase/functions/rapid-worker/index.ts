@@ -1,6 +1,7 @@
 // Edge Function: rapid-worker (cria e edita colaboradores)
 // Cria/edita um usuário no Supabase Auth + a linha correspondente em `profiles`.
-// Só pode ser chamada por um usuário autenticado com role = 'admin'.
+// Só pode ser chamada por um usuário autenticado com role = 'admin', ou por uma
+// conta com lider_geral = true (líder de equipe promovido a acesso total).
 // Usa a service_role key (via env var automática ou secret manual SERVICE_ROLE_KEY,
 // nunca exposta ao navegador) para ter permissão de mexer no Auth Admin API.
 
@@ -64,11 +65,14 @@ Deno.serve(async (req) => {
 
     const { data: perfilChamador, error: perfilError } = await clienteChamador
       .from('profiles')
-      .select('role')
+      .select('role, lider_geral')
       .eq('id', userData.user.id)
       .single()
 
-    if (perfilError || perfilChamador?.role !== 'admin') {
+    const chamadorPodeAdministrar =
+      perfilChamador?.role === 'admin' || perfilChamador?.lider_geral === true
+
+    if (perfilError || !chamadorPodeAdministrar) {
       return jsonResponse({ erro: 'Apenas administradores podem criar colaboradores.' }, 403)
     }
 

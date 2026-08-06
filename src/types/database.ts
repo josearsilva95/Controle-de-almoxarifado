@@ -16,6 +16,7 @@ export interface Profile {
   role: Role
   deposito: Deposito | null
   oculto: boolean
+  lider_geral: boolean
   created_at: string
 }
 

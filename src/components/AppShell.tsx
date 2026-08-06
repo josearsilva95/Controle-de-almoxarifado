@@ -3,8 +3,10 @@ import { Link, NavLink } from 'react-router-dom'
 import { BarChart3, ClipboardList, LogOut, Package, Plus, Users } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { iniciaisDoNome, rotuloRole } from '../lib/cores'
+import { podeAdministrar } from '../lib/permissoes'
 import { AlertasEmpilhadeira } from './AlertasEmpilhadeira'
 import { classesBotao, classesBotaoIcone } from './ui/Botao'
+import type { Profile } from '../types/database'
 
 const LINKS_ADMIN = [
   { to: '/admin', label: 'Requisições', icon: ClipboardList, fim: true },
@@ -12,10 +14,11 @@ const LINKS_ADMIN = [
   { to: '/admin/relatorios', label: 'Relatórios', icon: BarChart3, fim: false },
 ]
 
-function linksPara(role: string): typeof LINKS_ADMIN {
-  if (role === 'admin') return LINKS_ADMIN
-  if (role === 'funcionario') return [{ to: '/tarefas', label: 'Minhas Requisições', icon: ClipboardList, fim: true }]
-  if (role === 'lider') return [{ to: '/lider/desempenho', label: 'Desempenho', icon: BarChart3, fim: true }]
+function linksPara(profile: Profile): typeof LINKS_ADMIN {
+  if (podeAdministrar(profile)) return LINKS_ADMIN
+  if (profile.role === 'funcionario') {
+    return [{ to: '/tarefas', label: 'Minhas Requisições', icon: ClipboardList, fim: true }]
+  }
   return []
 }
 
@@ -35,11 +38,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { profile, logout } = useAuth()
   if (!profile) return null
 
-  const links = linksPara(profile.role)
+  const links = linksPara(profile)
+  const administra = podeAdministrar(profile)
 
   return (
     <div className="flex min-h-svh flex-col bg-background md:flex-row">
-      {profile.role === 'admin' && <AlertasEmpilhadeira />}
+      {administra && <AlertasEmpilhadeira />}
 
       {/* Navegação lateral — só em telas médias/grandes; no celular vira a barra inferior. */}
       <aside className="hidden w-16 shrink-0 flex-col border-r border-slate-800 bg-slate-900 py-4 md:flex md:w-60">
@@ -81,7 +85,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="hidden text-sm font-semibold text-card-foreground sm:inline">Controle de Movimentação</span>
           </div>
 
-          {profile.role === 'admin' && (
+          {administra && (
             <Link to="/admin/nova-requisicao" className={classesBotao('primaria', 'sm')} aria-label="Nova Requisição">
               <Plus className="h-4 w-4 sm:hidden" />
               <span className="hidden sm:inline">+ Nova Requisição</span>

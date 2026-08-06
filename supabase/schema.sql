@@ -92,6 +92,10 @@ create trigger pedidos_set_updated_at
 -- Função auxiliar is_admin() — usada nas policies de RLS
 -- ============================================================
 
+-- Também retorna true para contas com lider_geral=true: um líder de equipe
+-- promovido dessa forma passa a ter, no banco, exatamente a mesma permissão
+-- de um admin (cria/edita/exclui requisições e colaboradores). Continua sendo
+-- por conta específica, não pelo papel 'lider' em geral.
 create function public.is_admin()
 returns boolean
 language sql
@@ -101,7 +105,7 @@ stable
 as $$
   select exists (
     select 1 from public.profiles
-    where id = auth.uid() and role = 'admin'
+    where id = auth.uid() and (role = 'admin' or lider_geral = true)
   );
 $$;
 
