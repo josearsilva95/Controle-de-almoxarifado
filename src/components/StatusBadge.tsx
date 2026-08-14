@@ -1,12 +1,10 @@
-import { corDoStatus, rotuloStatus } from '../lib/cores'
+import { CORES, corDoStatus, rotuloStatus } from '../lib/cores'
 import type { Pedido } from '../types/database'
-
-const COR_AGUARDANDO_RETIRADA = '#8b5cf6'
 
 export function StatusBadge({ pedido }: { pedido: Pick<Pedido, 'status' | 'urgencia' | 'entregue_em'> }) {
   const aguardandoRetirada = pedido.status === 'finalizado' && !pedido.entregue_em
   const clara = !aguardandoRetirada && pedido.status === 'pendente' && pedido.urgencia === 'nao_urgente'
-  const cor = aguardandoRetirada ? COR_AGUARDANDO_RETIRADA : corDoStatus(pedido)
+  const cor = aguardandoRetirada ? CORES.aguardando_retirada : corDoStatus(pedido)
   const texto = aguardandoRetirada
     ? 'Aguardando retirada'
     : pedido.status === 'finalizado'

@@ -1,6 +1,6 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import type { MouseEvent } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { CheckCircle2, ClipboardList, Clock, Inbox, Pencil, PackageCheck, Trash2 } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { usePedidosContext } from '../hooks/usePedidosContext'
 import { usePerfis } from '../hooks/usePerfis'
@@ -11,11 +11,29 @@ import { SessoesTimeline } from '../components/SessoesTimeline'
 import { AppShell } from '../components/AppShell'
 import { EditarRequisicaoModal } from '../components/EditarRequisicaoModal'
 import { classesBotaoIcone } from '../components/ui/Botao'
+import { Cartao } from '../components/ui/Cartao'
+import { KpiCard } from '../components/ui/KpiCard'
+import { GraficoStatusEmpilhado } from '../components/ui/GraficoStatusEmpilhado'
+import { GraficoBarrasHorizontais } from '../components/ui/GraficoBarrasHorizontais'
 import { supabase } from '../lib/supabaseClient'
 import { formatDataHora } from '../lib/tempo'
-import { rotuloDeposito } from '../lib/depositos'
+import { DEPOSITOS, COR_DEPOSITO, rotuloDeposito } from '../lib/depositos'
 import { rotuloMotivoPausa } from '../lib/motivosPausa'
-import type { Pedido } from '../types/database'
+import { CORES } from '../lib/cores'
+import type { Pedido, Status } from '../types/database'
+
+const ABAS: { id: Status | 'todas'; label: string }[] = [
+  { id: 'todas', label: 'Todas' },
+  { id: 'pendente', label: 'Pendentes' },
+  { id: 'em_andamento', label: 'Em Andamento' },
+  { id: 'pausado', label: 'Pausadas' },
+  { id: 'finalizado', label: 'Concluídas' },
+]
+
+function percentual(parte: number, total: number): string {
+  if (total === 0) return '0% do total'
+  return `${((parte / total) * 100).toFixed(1)}% do total`
+}
 
 export function AdminDashboard() {
   const { profile } = useAuth()
@@ -23,7 +41,42 @@ export function AdminDashboard() {
   const perfis = usePerfis()
   const [pedidoExpandido, setPedidoExpandido] = useState<string | null>(null)
   const [pedidoEditando, setPedidoEditando] = useState<Pedido | null>(null)
+  const [abaAtiva, setAbaAtiva] = useState<Status | 'todas'>('todas')
   const { sessoes } = usePedidoSessoes(pedidoExpandido)
+
+  const stats = useMemo(() => {
+    const total = pedidos.length
+    const pendentes = pedidos.filter((p) => p.status === 'pendente').length
+    const emAndamento = pedidos.filter((p) => p.status === 'em_andamento').length
+    const pausadas = pedidos.filter((p) => p.status === 'pausado').length
+    const finalizadas = pedidos.filter((p) => p.status === 'finalizado').length
+    const aguardandoRetirada = pedidos.filter((p) => p.status === 'finalizado' && !p.entregue_em).length
+    return { total, pendentes, emAndamento, pausadas, finalizadas, aguardandoRetirada }
+  }, [pedidos])
+
+  const contagemPorAba: Record<Status | 'todas', number> = {
+    todas: stats.total,
+    pendente: stats.pendentes,
+    em_andamento: stats.emAndamento,
+    pausado: stats.pausadas,
+    finalizado: stats.finalizadas,
+  }
+
+  const pedidosFiltrados = abaAtiva === 'todas' ? pedidos : pedidos.filter((p) => p.status === abaAtiva)
+
+  const itensStatus = [
+    { rotulo: 'Pendente', valor: stats.pendentes, cor: CORES.pendente },
+    { rotulo: 'Em andamento', valor: stats.emAndamento, cor: CORES.em_andamento },
+    { rotulo: 'Pausado', valor: stats.pausadas, cor: CORES.pausado },
+    { rotulo: 'Concluído', valor: stats.finalizadas, cor: CORES.finalizado },
+  ]
+
+  const itensDeposito = DEPOSITOS.map((deposito) => ({
+    id: deposito,
+    rotulo: rotuloDeposito(deposito),
+    valor: pedidos.filter((p) => p.deposito === deposito).length,
+    cor: COR_DEPOSITO[deposito],
+  }))
 
   if (!profile) return null
 
@@ -52,14 +105,75 @@ export function AdminDashboard() {
 
   return (
     <AppShell>
-      <h2 className="mb-4 text-lg font-semibold text-foreground">Requisições</h2>
+      <h2 className="text-lg font-semibold text-foreground">Requisições</h2>
+      <p className="mb-5 text-sm text-muted-foreground">
+        Gerencie todas as requisições de materiais e acompanhe o status.
+      </p>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <KpiCard label="Total de Requisições" valor={String(stats.total)} icone={ClipboardList} />
+        <KpiCard
+          label="Pendentes"
+          valor={String(stats.pendentes)}
+          icone={Inbox}
+          cor={CORES.pendente}
+          descricao={percentual(stats.pendentes, stats.total)}
+        />
+        <KpiCard
+          label="Em Andamento"
+          valor={String(stats.emAndamento)}
+          icone={Clock}
+          cor={CORES.em_andamento}
+          descricao={percentual(stats.emAndamento, stats.total)}
+        />
+        <KpiCard
+          label="Concluídas"
+          valor={String(stats.finalizadas)}
+          icone={CheckCircle2}
+          cor={CORES.finalizado}
+          descricao={percentual(stats.finalizadas, stats.total)}
+        />
+        <KpiCard
+          label="Aguardando Retirada"
+          valor={String(stats.aguardandoRetirada)}
+          icone={PackageCheck}
+          cor={CORES.aguardando_retirada}
+          descricao={percentual(stats.aguardandoRetirada, stats.total)}
+        />
+      </div>
+
+      <div className="mb-4 flex items-center gap-5 overflow-x-auto border-b border-border">
+        {ABAS.map((aba) => (
+          <button
+            key={aba.id}
+            type="button"
+            className={`flex shrink-0 items-center gap-1.5 border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+              abaAtiva === aba.id
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-card-foreground'
+            }`}
+            onClick={() => setAbaAtiva(aba.id)}
+          >
+            {aba.label}
+            {aba.id !== 'todas' && (
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
+                  abaAtiva === aba.id ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {contagemPorAba[aba.id]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
       {carregando && <p className="py-8 text-center text-sm text-muted-foreground">Carregando requisições...</p>}
-      {!carregando && pedidos.length === 0 && (
-        <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma requisição cadastrada ainda.</p>
+      {!carregando && pedidosFiltrados.length === 0 && (
+        <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma requisição nesta aba.</p>
       )}
 
-      {!carregando && pedidos.length > 0 && (
+      {!carregando && pedidosFiltrados.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -78,7 +192,7 @@ export function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {pedidos.map((pedido) => (
+              {pedidosFiltrados.map((pedido) => (
                 <Fragment key={pedido.id}>
                   <tr
                     className="cursor-pointer border-t border-border hover:bg-muted/40"
@@ -159,6 +273,25 @@ export function AdminDashboard() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!carregando && pedidos.length > 0 && (
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Cartao>
+            <h3 className="text-base font-semibold text-card-foreground">Requisições por Status</h3>
+            <p className="text-sm text-muted-foreground">Distribuição de todas as requisições</p>
+            <div className="mt-5">
+              <GraficoStatusEmpilhado itens={itensStatus} />
+            </div>
+          </Cartao>
+          <Cartao>
+            <h3 className="text-base font-semibold text-card-foreground">Requisições por Depósito</h3>
+            <p className="text-sm text-muted-foreground">Onde as requisições estão concentradas</p>
+            <div className="mt-5">
+              <GraficoBarrasHorizontais itens={itensDeposito} />
+            </div>
+          </Cartao>
         </div>
       )}
 

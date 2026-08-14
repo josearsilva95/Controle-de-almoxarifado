@@ -31,8 +31,11 @@ export function AdminColaboradores() {
 
   return (
     <AppShell>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Colaboradores</h2>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Colaboradores</h2>
+          <p className="text-sm text-muted-foreground">Gerencie a equipe e acompanhe o desempenho de cada um.</p>
+        </div>
         <Link to="/admin/novo-colaborador" className={classesBotao('primaria', 'sm')}>
           + Novo Colaborador
         </Link>

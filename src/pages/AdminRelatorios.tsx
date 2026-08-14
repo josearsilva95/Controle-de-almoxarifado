@@ -159,8 +159,11 @@ export function AdminRelatorios() {
 
   return (
     <AppShell>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Relatórios</h2>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Relatórios</h2>
+          <p className="text-sm text-muted-foreground">Indicadores gerais e desempenho da equipe.</p>
+        </div>
         <Botao tamanho="sm" onClick={baixarPdfDoMes}>
           <Download className="h-4 w-4" />
           Baixar PDF do mês

@@ -4,8 +4,11 @@ export const CORES = {
   urgente: '#e53935',
   medio: '#fb8c00',
   nao_urgente: '#f5f5f5',
+  pendente: '#6b7280',
+  em_andamento: '#4a3aa7',
   pausado: '#1e88e5',
   finalizado: '#43a047',
+  aguardando_retirada: '#8b5cf6',
 } as const
 
 /**

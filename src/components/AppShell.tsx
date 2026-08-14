@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { BarChart3, ClipboardList, LogOut, Package, Plus, Users } from 'lucide-react'
+import { BarChart3, ChevronLeft, ChevronRight, ClipboardList, LogOut, Package, Plus, Users } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { iniciaisDoNome, rotuloRole } from '../lib/cores'
 import { podeAdministrar } from '../lib/permissoes'
@@ -36,28 +37,43 @@ function itemClasseMobile(ativo: boolean): string {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { profile, logout } = useAuth()
+  const [recolhida, setRecolhida] = useState(() => localStorage.getItem('sidebar-recolhida') === '1')
   if (!profile) return null
 
   const links = linksPara(profile)
   const administra = podeAdministrar(profile)
+
+  function alternarRecolhida() {
+    setRecolhida((atual) => {
+      const novo = !atual
+      localStorage.setItem('sidebar-recolhida', novo ? '1' : '0')
+      return novo
+    })
+  }
 
   return (
     <div className="flex min-h-svh flex-col bg-background md:flex-row">
       {administra && <AlertasEmpilhadeira />}
 
       {/* Navegação lateral — só em telas médias/grandes; no celular vira a barra inferior. */}
-      <aside className="hidden w-16 shrink-0 flex-col border-r border-slate-800 bg-slate-900 py-4 md:flex md:w-60">
+      <aside
+        className={`hidden shrink-0 flex-col border-r border-slate-800 bg-slate-900 py-4 transition-[width] duration-200 md:flex ${
+          recolhida ? 'md:w-16' : 'md:w-60'
+        }`}
+      >
         <div className="mb-6 flex items-center gap-2 px-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Package className="h-5 w-5" />
           </div>
-          <div className="hidden md:block">
-            <p className="text-sm font-semibold text-white">Controle de Movimentação</p>
-            <p className="text-xs text-slate-400">Separação de requisições</p>
-          </div>
+          {!recolhida && (
+            <div className="hidden md:block">
+              <p className="text-sm font-semibold text-white">Controle de Movimentação</p>
+              <p className="text-xs text-slate-400">Separação de requisições</p>
+            </div>
+          )}
         </div>
 
-        <nav className="flex flex-col gap-1 px-3">
+        <nav className="flex flex-1 flex-col gap-1 px-3">
           {links.map((link) => {
             const Icon = link.icon
             return (
@@ -69,11 +85,21 @@ export function AppShell({ children }: { children: ReactNode }) {
                 title={link.label}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                <span className="hidden md:inline">{link.label}</span>
+                {!recolhida && <span className="hidden md:inline">{link.label}</span>}
               </NavLink>
             )
           })}
         </nav>
+
+        <button
+          type="button"
+          className="mx-3 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+          onClick={alternarRecolhida}
+          title={recolhida ? 'Expandir menu' : 'Recolher menu'}
+        >
+          {recolhida ? <ChevronRight className="h-4 w-4 shrink-0" /> : <ChevronLeft className="h-4 w-4 shrink-0" />}
+          {!recolhida && <span>Recolher menu</span>}
+        </button>
       </aside>
 
       <div className="flex flex-1 flex-col">

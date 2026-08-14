@@ -130,8 +130,11 @@ export function FuncionarioTarefas() {
 
   return (
     <AppShell>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Minhas Requisições</h2>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Minhas Requisições</h2>
+          <p className="text-sm text-muted-foreground">Requisições do seu depósito, por ordem de urgência.</p>
+        </div>
         {!modoSelecao ? (
           <Botao
             variante="secundaria"
