@@ -157,7 +157,7 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
 
       {!erro && pronto && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="relative aspect-[5/2] w-[85%] max-w-md overflow-hidden rounded-xl">
+          <div className="relative aspect-[3/1] w-[94%] max-w-2xl overflow-hidden rounded-xl">
             <div className="absolute inset-0 rounded-xl border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
             <div className="absolute inset-x-0 top-0 h-0.5 animate-[varrer_1.8s_ease-in-out_infinite] bg-primary shadow-[0_0_8px_2px] shadow-primary" />
           </div>
