@@ -10,21 +10,30 @@ import { gerarPdfEstoque } from '../lib/estoquePdf'
 import type { EstoqueItem } from '../types/database'
 
 const ITENS_POR_PAGINA = 50
+const SEM_CATEGORIA = 'Sem categoria'
 
 export function AdminEstoque() {
   const { itens, carregando, recarregar } = useEstoque()
   const [busca, setBusca] = useState('')
+  const [categoriaAtiva, setCategoriaAtiva] = useState('todas')
   const [pagina, setPagina] = useState(1)
   const [itemEditando, setItemEditando] = useState<EstoqueItem | null>(null)
   const [criando, setCriando] = useState(false)
 
-  // Só pra alimentar a sugestão de categoria no modal de novo/editar item —
-  // não vira filtro visual na tela, é livre digitação com autocomplete.
-  const categoriasExistentes = useMemo(() => {
-    const nomes = new Set<string>()
-    for (const item of itens) if (item.categoria) nomes.add(item.categoria)
-    return [...nomes].sort((a, b) => a.localeCompare(b))
+  const categorias = useMemo(() => {
+    const contagem = new Map<string, number>()
+    for (const item of itens) {
+      const nome = item.categoria || SEM_CATEGORIA
+      contagem.set(nome, (contagem.get(nome) ?? 0) + 1)
+    }
+    return [...contagem.entries()].sort((a, b) => b[1] - a[1])
   }, [itens])
+
+  // "Todas" é o padrão — sem clicar em nenhuma aba, a busca já cobre tudo.
+  const itensDaCategoria = useMemo(() => {
+    if (categoriaAtiva === 'todas') return itens
+    return itens.filter((item) => (item.categoria || SEM_CATEGORIA) === categoriaAtiva)
+  }, [itens, categoriaAtiva])
 
   // Busca por palavras, em qualquer ordem: cada palavra digitada precisa
   // aparecer em algum lugar (código, descrição ou categoria) — não precisa ser
@@ -32,18 +41,18 @@ export function AdminEstoque() {
   // "PARAFUSO SEXTAVADO M16 X 50 DIN...", mesmo abreviado e fora de ordem.
   const itensFiltrados = useMemo(() => {
     const termos = busca.trim().toLowerCase().split(/\s+/).filter(Boolean)
-    if (termos.length === 0) return itens
-    return itens.filter((item) => {
+    if (termos.length === 0) return itensDaCategoria
+    return itensDaCategoria.filter((item) => {
       const alvo = `${item.codigo} ${item.descricao} ${item.categoria ?? ''}`.toLowerCase()
       return termos.every((termo) => alvo.includes(termo))
     })
-  }, [itens, busca])
+  }, [itensDaCategoria, busca])
 
-  // Volta pra página 1 sempre que a busca muda — senão dá pra "sumir" numa
+  // Volta pra página 1 sempre que o filtro muda — senão dá pra "sumir" numa
   // página que não existe mais pro resultado novo.
   useEffect(() => {
     setPagina(1)
-  }, [busca])
+  }, [busca, categoriaAtiva])
 
   const totalPaginas = Math.max(1, Math.ceil(itensFiltrados.length / ITENS_POR_PAGINA))
   const itensDaPagina = itensFiltrados.slice((pagina - 1) * ITENS_POR_PAGINA, pagina * ITENS_POR_PAGINA)
@@ -61,7 +70,8 @@ export function AdminEstoque() {
   }
 
   function baixarPdf() {
-    gerarPdfEstoque(itensFiltrados, busca.trim() ? `busca "${busca.trim()}"` : 'todos os itens')
+    const rotulo = categoriaAtiva === 'todas' ? 'todos os itens' : categoriaAtiva
+    gerarPdfEstoque(itensFiltrados, busca.trim() ? `${rotulo} · busca "${busca.trim()}"` : rotulo)
   }
 
   return (
@@ -92,6 +102,50 @@ export function AdminEstoque() {
           onChange={(e) => setBusca(e.target.value)}
         />
       </div>
+
+      {!carregando && itens.length > 0 && (
+        <div className="mb-5 flex items-center gap-5 overflow-x-auto border-b border-border">
+          <button
+            type="button"
+            className={`flex shrink-0 items-center gap-1.5 border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+              categoriaAtiva === 'todas'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-card-foreground'
+            }`}
+            onClick={() => setCategoriaAtiva('todas')}
+          >
+            Todas
+            <span
+              className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
+                categoriaAtiva === 'todas' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              {itens.length}
+            </span>
+          </button>
+          {categorias.map(([nome, total]) => (
+            <button
+              key={nome}
+              type="button"
+              className={`flex shrink-0 items-center gap-1.5 border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+                categoriaAtiva === nome
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-card-foreground'
+              }`}
+              onClick={() => setCategoriaAtiva(nome)}
+            >
+              {nome}
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
+                  categoriaAtiva === nome ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {total}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {carregando && <p className="py-8 text-center text-sm text-muted-foreground">Carregando estoque...</p>}
       {!carregando && itens.length === 0 && (
@@ -186,7 +240,7 @@ export function AdminEstoque() {
       {(criando || itemEditando) && (
         <EstoqueItemModal
           item={itemEditando}
-          categoriasExistentes={categoriasExistentes}
+          categoriasExistentes={categorias.map(([nome]) => nome).filter((nome) => nome !== SEM_CATEGORIA)}
           onFechar={() => {
             setCriando(false)
             setItemEditando(null)
