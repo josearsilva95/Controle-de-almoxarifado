@@ -28,12 +28,15 @@ const LINKS_ADMIN = [
 ]
 
 function linksPara(profile: Profile): typeof LINKS_ADMIN {
-  const base = podeAdministrar(profile)
+  const administra = podeAdministrar(profile)
+  const base = administra
     ? LINKS_ADMIN
     : profile.role === 'funcionario'
       ? [{ to: '/tarefas', label: 'Minhas Requisições', icon: ClipboardList, fim: true }]
       : []
-  if (!profile.equipe_estoque) return base
+  // Admin/líder acompanham o inventário geral mesmo sem estar numa equipe;
+  // quem não administra só vê o link se tiver sido colocado numa equipe.
+  if (!administra && !profile.equipe_estoque) return base
   return [...base, { to: '/inventario', label: 'Inventário', icon: CheckSquare, fim: true }]
 }
 

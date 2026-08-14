@@ -324,6 +324,7 @@ create policy estoque_contagens_update_propria_equipe
 
 alter publication supabase_realtime add table public.pedidos;
 alter publication supabase_realtime add table public.pedido_sessoes;
+alter publication supabase_realtime add table public.estoque_contagens;
 
 -- ============================================================
 -- Após rodar este schema:
