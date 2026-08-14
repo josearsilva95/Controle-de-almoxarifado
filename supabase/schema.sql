@@ -196,6 +196,9 @@ create table public.estoque_itens (
   codigo text not null,
   descricao text not null,
   deposito text not null check (deposito in ('deposito_1', 'deposito_2', 'deposito_3')),
+  -- Livre (não é enum fixo) — vem da "Família" do sistema de origem, usada
+  -- pra agrupar em abas na tela em vez de só buscar em uma lista enorme.
+  categoria text,
   -- Nullable: a carga inicial só tem código/descrição, quantidade é
   -- preenchida depois conforme a auditoria avança.
   quantidade integer,
@@ -205,6 +208,7 @@ create table public.estoque_itens (
 );
 
 create index estoque_itens_codigo_idx on public.estoque_itens (codigo);
+create index estoque_itens_categoria_idx on public.estoque_itens (categoria);
 
 create trigger estoque_itens_set_updated_at
   before update on public.estoque_itens

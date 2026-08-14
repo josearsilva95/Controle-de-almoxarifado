@@ -9,13 +9,15 @@ import type { Deposito, EstoqueItem } from '../types/database'
 
 interface EstoqueItemModalProps {
   item: EstoqueItem | null
+  categoriasExistentes: string[]
   onFechar: () => void
   onSalvo: () => void
 }
 
-export function EstoqueItemModal({ item, onFechar, onSalvo }: EstoqueItemModalProps) {
+export function EstoqueItemModal({ item, categoriasExistentes, onFechar, onSalvo }: EstoqueItemModalProps) {
   const [codigo, setCodigo] = useState(item?.codigo ?? '')
   const [descricao, setDescricao] = useState(item?.descricao ?? '')
+  const [categoria, setCategoria] = useState(item?.categoria ?? '')
   const [deposito, setDeposito] = useState<Deposito>(item?.deposito ?? 'deposito_1')
   const [quantidade, setQuantidade] = useState(item?.quantidade != null ? String(item.quantidade) : '')
   const [salvando, setSalvando] = useState(false)
@@ -29,6 +31,7 @@ export function EstoqueItemModal({ item, onFechar, onSalvo }: EstoqueItemModalPr
     const corpo = {
       codigo: codigo.trim(),
       descricao: descricao.trim(),
+      categoria: categoria.trim() || null,
       deposito,
       quantidade: quantidade.trim() ? Number(quantidade) : null,
     }
@@ -73,6 +76,23 @@ export function EstoqueItemModal({ item, onFechar, onSalvo }: EstoqueItemModalPr
             onChange={(e) => setDescricao(e.target.value)}
             required
           />
+        </label>
+
+        <label className="mb-3.5 flex flex-col gap-1 text-sm font-medium text-card-foreground">
+          Categoria (opcional)
+          <input
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+            type="text"
+            list="categorias-existentes"
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            placeholder="Ex: Parafusos e Prisioneiros"
+          />
+          <datalist id="categorias-existentes">
+            {categoriasExistentes.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </label>
 
         <label className="mb-4 flex flex-col gap-1 text-sm font-medium text-card-foreground">

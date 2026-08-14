@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Download, Pencil, Search, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { ChevronLeft, ChevronRight, Download, Pencil, Search, Trash2 } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
 import { EstoqueItemModal } from '../components/EstoqueItemModal'
 import { Botao, classesBotaoIcone } from '../components/ui/Botao'
@@ -9,19 +9,47 @@ import { rotuloDeposito } from '../lib/depositos'
 import { gerarPdfEstoque } from '../lib/estoquePdf'
 import type { EstoqueItem } from '../types/database'
 
+const SEM_CATEGORIA = 'Sem categoria'
+const ITENS_POR_PAGINA = 50
+
 export function AdminEstoque() {
   const { itens, carregando, recarregar } = useEstoque()
   const [busca, setBusca] = useState('')
+  const [categoriaAtiva, setCategoriaAtiva] = useState('todas')
+  const [pagina, setPagina] = useState(1)
   const [itemEditando, setItemEditando] = useState<EstoqueItem | null>(null)
   const [criando, setCriando] = useState(false)
 
+  const categorias = useMemo(() => {
+    const contagem = new Map<string, number>()
+    for (const item of itens) {
+      const nome = item.categoria || SEM_CATEGORIA
+      contagem.set(nome, (contagem.get(nome) ?? 0) + 1)
+    }
+    return [...contagem.entries()].sort((a, b) => b[1] - a[1])
+  }, [itens])
+
+  const itensDaCategoria = useMemo(() => {
+    if (categoriaAtiva === 'todas') return itens
+    return itens.filter((item) => (item.categoria || SEM_CATEGORIA) === categoriaAtiva)
+  }, [itens, categoriaAtiva])
+
   const itensFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
-    if (!termo) return itens
-    return itens.filter(
+    if (!termo) return itensDaCategoria
+    return itensDaCategoria.filter(
       (item) => item.codigo.toLowerCase().includes(termo) || item.descricao.toLowerCase().includes(termo)
     )
-  }, [itens, busca])
+  }, [itensDaCategoria, busca])
+
+  // Volta pra página 1 sempre que o filtro muda — senão dá pra "sumir" numa
+  // página que não existe mais pro resultado novo.
+  useEffect(() => {
+    setPagina(1)
+  }, [busca, categoriaAtiva])
+
+  const totalPaginas = Math.max(1, Math.ceil(itensFiltrados.length / ITENS_POR_PAGINA))
+  const itensDaPagina = itensFiltrados.slice((pagina - 1) * ITENS_POR_PAGINA, pagina * ITENS_POR_PAGINA)
 
   async function excluirItem(item: EstoqueItem) {
     const confirmado = window.confirm(`Excluir o item ${item.codigo} — ${item.descricao}?`)
@@ -36,7 +64,8 @@ export function AdminEstoque() {
   }
 
   function baixarPdf() {
-    gerarPdfEstoque(itensFiltrados, busca.trim() ? 'filtro aplicado' : 'todos os itens')
+    const rotulo = categoriaAtiva === 'todas' ? 'todos os itens' : categoriaAtiva
+    gerarPdfEstoque(itensFiltrados, busca.trim() ? `${rotulo} · busca "${busca.trim()}"` : rotulo)
   }
 
   return (
@@ -68,67 +97,130 @@ export function AdminEstoque() {
         />
       </div>
 
+      {!carregando && itens.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              categoriaAtiva === 'todas'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border text-muted-foreground hover:border-primary/40 hover:text-card-foreground'
+            }`}
+            onClick={() => setCategoriaAtiva('todas')}
+          >
+            Todas <span className="font-semibold">({itens.length})</span>
+          </button>
+          {categorias.map(([nome, total]) => (
+            <button
+              key={nome}
+              type="button"
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                categoriaAtiva === nome
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border text-muted-foreground hover:border-primary/40 hover:text-card-foreground'
+              }`}
+              onClick={() => setCategoriaAtiva(nome)}
+            >
+              {nome} <span className="font-semibold">({total})</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {carregando && <p className="py-8 text-center text-sm text-muted-foreground">Carregando estoque...</p>}
       {!carregando && itens.length === 0 && (
         <p className="py-8 text-center text-sm text-muted-foreground">Nenhum item cadastrado ainda.</p>
       )}
       {!carregando && itens.length > 0 && itensFiltrados.length === 0 && (
-        <p className="py-8 text-center text-sm text-muted-foreground">Nenhum item encontrado para "{busca}".</p>
+        <p className="py-8 text-center text-sm text-muted-foreground">Nenhum item encontrado.</p>
       )}
 
       {!carregando && itensFiltrados.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <th className="px-3 py-2.5">Código</th>
-                <th className="px-3 py-2.5">Descrição</th>
-                <th className="px-3 py-2.5">Depósito</th>
-                <th className="px-3 py-2.5">Quantidade</th>
-                <th className="px-3 py-2.5 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {itensFiltrados.map((item) => (
-                <tr key={item.id} className="border-t border-border hover:bg-muted/40">
-                  <td className="px-3 py-2.5 font-medium text-card-foreground">{item.codigo}</td>
-                  <td className="px-3 py-2.5 text-card-foreground">{item.descricao}</td>
-                  <td className="px-3 py-2.5 text-muted-foreground">{rotuloDeposito(item.deposito)}</td>
-                  <td className="px-3 py-2.5 text-muted-foreground">
-                    {item.quantidade != null ? item.quantidade : '—'}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex justify-end gap-1">
-                      <button
-                        type="button"
-                        className={classesBotaoIcone()}
-                        onClick={() => setItemEditando(item)}
-                        aria-label={`Editar ${item.codigo}`}
-                        title="Editar"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className={classesBotaoIcone(true)}
-                        onClick={() => excluirItem(item)}
-                        aria-label={`Excluir ${item.codigo}`}
-                        title="Excluir"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
+        <>
+          <div className="overflow-x-auto rounded-xl border border-border bg-card">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <th className="px-3 py-2.5">Código</th>
+                  <th className="px-3 py-2.5">Descrição</th>
+                  <th className="px-3 py-2.5">Categoria</th>
+                  <th className="px-3 py-2.5">Depósito</th>
+                  <th className="px-3 py-2.5">Quantidade</th>
+                  <th className="px-3 py-2.5 text-right">Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {itensDaPagina.map((item) => (
+                  <tr key={item.id} className="border-t border-border hover:bg-muted/40">
+                    <td className="px-3 py-2.5 font-medium text-card-foreground">{item.codigo}</td>
+                    <td className="px-3 py-2.5 text-card-foreground">{item.descricao}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{item.categoria || '—'}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{rotuloDeposito(item.deposito)}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
+                      {item.quantidade != null ? item.quantidade : '—'}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          type="button"
+                          className={classesBotaoIcone()}
+                          onClick={() => setItemEditando(item)}
+                          aria-label={`Editar ${item.codigo}`}
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className={classesBotaoIcone(true)}
+                          onClick={() => excluirItem(item)}
+                          aria-label={`Excluir ${item.codigo}`}
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPaginas > 1 && (
+            <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
+              <span>
+                {itensFiltrados.length} itens · página {pagina} de {totalPaginas}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={`${classesBotaoIcone()} border border-border disabled:pointer-events-none disabled:opacity-40`}
+                  onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                  disabled={pagina === 1}
+                  aria-label="Página anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  className={`${classesBotaoIcone()} border border-border disabled:pointer-events-none disabled:opacity-40`}
+                  onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                  disabled={pagina === totalPaginas}
+                  aria-label="Próxima página"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {(criando || itemEditando) && (
         <EstoqueItemModal
           item={itemEditando}
+          categoriasExistentes={categorias.map(([nome]) => nome).filter((nome) => nome !== SEM_CATEGORIA)}
           onFechar={() => {
             setCriando(false)
             setItemEditando(null)
