@@ -1,11 +1,32 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
+import { BarcodeFormat, DecodeHintType } from '@zxing/library'
 import { X } from 'lucide-react'
 
 interface ScannerCodigoBarrasProps {
   onLido: (codigo: string) => void
   onFechar: () => void
 }
+
+// Restringe aos formatos de barra comuns em etiqueta de almoxarifado (em vez
+// de tentar todos, incluindo QR) e pede pra tentar mais — mais lento por
+// frame, mas bem mais certeiro, que é o que importa numa leitura pontual.
+const DICAS = new Map<DecodeHintType, unknown>([
+  [
+    DecodeHintType.POSSIBLE_FORMATS,
+    [
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.ITF,
+      BarcodeFormat.CODABAR,
+    ],
+  ],
+  [DecodeHintType.TRY_HARDER, true],
+])
 
 // Lê o código de barras direto da câmera (sem OCR) — nas etiquetas do
 // almoxarifado o código de barras é só a versão "pra máquina ler" do mesmo
@@ -16,12 +37,25 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
   const [erro, setErro] = useState<string | null>(null)
 
   useEffect(() => {
-    const leitor = new BrowserMultiFormatReader()
+    const leitor = new BrowserMultiFormatReader(DICAS)
     let controle: { stop: () => void } | null = null
     let cancelado = false
 
+    // Pede resolução alta e foco contínuo — a câmera "padrão" do
+    // getUserMedia costuma vir baixa/desfocada de perto, o que é
+    // exatamente a distância em que se lê um código de barras.
+    const constraints: MediaStreamConstraints = {
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        // @ts-expect-error focusMode não está no lib.dom.d.ts mas é suportado no Chrome/Android
+        advanced: [{ focusMode: 'continuous' }],
+      },
+    }
+
     leitor
-      .decodeFromVideoDevice(undefined, videoRef.current ?? undefined, (resultado, erroLeitura, ctrl) => {
+      .decodeFromConstraints(constraints, videoRef.current ?? undefined, (resultado, erroLeitura, ctrl) => {
         controle = ctrl
         if (cancelado) return
         if (resultado) {
