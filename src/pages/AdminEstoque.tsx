@@ -4,25 +4,32 @@ import { useAuth } from '../auth/useAuth'
 import { AppShell } from '../components/AppShell'
 import { EstoqueItemModal } from '../components/EstoqueItemModal'
 import { EstoqueEquipes } from '../components/EstoqueEquipes'
+import { InventarioContagem } from '../components/InventarioContagem'
+import { InventarioDivergencias } from '../components/InventarioDivergencias'
+import { InventarioPendencias } from '../components/InventarioPendencias'
+import { InventarioProgresso } from '../components/InventarioProgresso'
 import { Botao, classesBotaoIcone } from '../components/ui/Botao'
 import { usePerfis } from '../hooks/usePerfis'
 import { useEstoque } from '../hooks/useEstoque'
 import { useEstoqueContagens } from '../hooks/useEstoqueContagens'
+import { useEstoqueEquipesStatus } from '../hooks/useEstoqueEquipesStatus'
 import { supabase } from '../lib/supabaseClient'
 import { rotuloDeposito } from '../lib/depositos'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
+import { podeAdministrar } from '../lib/permissoes'
 import { gerarPdfEstoque } from '../lib/estoquePdf'
 import { gerarPdfInventario } from '../lib/inventarioPdf'
 import type { EstoqueItem } from '../types/database'
 
 const ITENS_POR_PAGINA = 50
 const SEM_CATEGORIA = 'Sem categoria'
-type Modo = 'catalogo' | 'equipes'
+type Modo = 'catalogo' | 'equipes' | 'inventario'
 
 export function AdminEstoque() {
   const { profile } = useAuth()
   const { itens, carregando, recarregar } = useEstoque()
-  const { contagens } = useEstoqueContagens()
+  const { contagens, recarregar: recarregarContagens } = useEstoqueContagens()
+  const { status: statusEquipes, recarregar: recarregarStatus } = useEstoqueEquipesStatus()
   const { perfis, recarregar: recarregarPerfis } = usePerfis()
   const [modo, setModo] = useState<Modo>('catalogo')
   const [busca, setBusca] = useState('')
@@ -83,6 +90,46 @@ export function AdminEstoque() {
 
   if (!profile) return null
 
+  // Colaborador de equipe (sem ser admin/líder): só a própria tela de
+  // contagem ou de divergências, sem abas de catálogo/equipes.
+  if (!podeAdministrar(profile)) {
+    const statusEquipe = statusEquipes.find((s) => s.equipe === profile.equipe_estoque)
+    return (
+      <AppShell>
+        <h2 className="text-lg font-semibold text-foreground">Estoque</h2>
+        <p className="mb-5 text-sm text-muted-foreground">
+          {profile.equipe_estoque === 'equipe_3'
+            ? 'Resolva as divergências entre a contagem da equipe 1 e da equipe 2.'
+            : 'Busque o item e registre a quantidade contada.'}
+        </p>
+
+        {(profile.equipe_estoque === 'equipe_1' || profile.equipe_estoque === 'equipe_2') && (
+          <InventarioContagem
+            itens={itens}
+            contagens={contagens}
+            equipe={profile.equipe_estoque}
+            usuarioId={profile.id}
+            statusEquipe={statusEquipe}
+            onContado={recarregarContagens}
+            onStatusMudou={recarregarStatus}
+          />
+        )}
+
+        {profile.equipe_estoque === 'equipe_3' && (
+          <>
+            <InventarioDivergencias
+              itens={itens}
+              contagens={contagens}
+              usuarioId={profile.id}
+              onContado={recarregarContagens}
+            />
+            <InventarioPendencias itens={itens} contagens={contagens} statusEquipes={statusEquipes} />
+          </>
+        )}
+      </AppShell>
+    )
+  }
+
   return (
     <AppShell>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
@@ -91,12 +138,13 @@ export function AdminEstoque() {
           <p className="text-sm text-muted-foreground">Catálogo oficial de itens e equipes do inventário.</p>
         </div>
         <div className="flex gap-2">
-          {modo === 'catalogo' ? (
+          {modo === 'catalogo' && (
             <Botao variante="secundaria" tamanho="sm" onClick={baixarPdf} disabled={itensFiltrados.length === 0}>
               <Download className="h-4 w-4" />
               Baixar PDF
             </Botao>
-          ) : (
+          )}
+          {modo === 'inventario' && (
             <Botao variante="secundaria" tamanho="sm" onClick={baixarPdfInventario} disabled={itens.length === 0}>
               <Download className="h-4 w-4" />
               Baixar PDF do inventário
@@ -111,29 +159,42 @@ export function AdminEstoque() {
       </div>
 
       <div className="mb-5 inline-flex rounded-md border border-border bg-card p-1">
-        <button
-          type="button"
-          className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
-            modo === 'catalogo' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-card-foreground'
-          }`}
-          onClick={() => setModo('catalogo')}
-        >
-          Catálogo
-        </button>
-        <button
-          type="button"
-          className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
-            modo === 'equipes' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-card-foreground'
-          }`}
-          onClick={() => setModo('equipes')}
-        >
-          Equipes
-        </button>
+        {(
+          [
+            ['catalogo', 'Catálogo'],
+            ['equipes', 'Equipes'],
+            ['inventario', 'Inventário'],
+          ] as const
+        ).map(([valor, rotulo]) => (
+          <button
+            key={valor}
+            type="button"
+            className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+              modo === valor ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-card-foreground'
+            }`}
+            onClick={() => setModo(valor)}
+          >
+            {rotulo}
+          </button>
+        ))}
       </div>
 
-      {modo === 'equipes' ? (
-        <EstoqueEquipes perfis={perfis} onAtualizado={recarregarPerfis} />
-      ) : (
+      {modo === 'equipes' && <EstoqueEquipes perfis={perfis} onAtualizado={recarregarPerfis} />}
+
+      {modo === 'inventario' && (
+        <>
+          <InventarioProgresso itens={itens} contagens={contagens} />
+          <InventarioDivergencias
+            itens={itens}
+            contagens={contagens}
+            usuarioId={profile.id}
+            onContado={recarregarContagens}
+          />
+          <InventarioPendencias itens={itens} contagens={contagens} statusEquipes={statusEquipes} />
+        </>
+      )}
+
+      {modo === 'catalogo' && (
         <>
           <div className="mb-4 flex items-center gap-2 rounded-md border border-input bg-card px-3 py-2 sm:max-w-sm">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />

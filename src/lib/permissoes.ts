@@ -8,9 +8,11 @@ export function podeAdministrar(profile: Profile | null | undefined): boolean {
   return profile.role === 'admin' || (profile.role === 'lider' && profile.lider_geral)
 }
 
-// Acesso ao Inventário: quem administra (visão geral) ou quem foi colocado
-// numa equipe de contagem pelo admin — não depende do papel (role).
-export function podeAcessarInventario(profile: Profile | null | undefined): boolean {
+// Acesso ao Estoque (catálogo + inventário): quem administra (vê tudo) ou
+// quem foi colocado numa equipe de contagem pelo admin — não depende do
+// papel (role). Um funcionário de equipe só enxerga a contagem, não o
+// catálogo nem a atribuição de equipes; isso é decidido na própria tela.
+export function podeAcessarEstoque(profile: Profile | null | undefined): boolean {
   if (!profile) return false
   return podeAdministrar(profile) || profile.equipe_estoque !== null
 }

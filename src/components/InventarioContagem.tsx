@@ -4,29 +4,41 @@ import { Check } from 'lucide-react'
 import { Botao } from './ui/Botao'
 import { Cartao } from './ui/Cartao'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
-import { registrarContagem } from '../lib/acoesEstoque'
+import { finalizarContagemEquipe, reabrirContagemEquipe, registrarContagem } from '../lib/acoesEstoque'
 import { formatDataHora } from '../lib/tempo'
-import type { EquipeEstoque, EstoqueContagem, EstoqueItem } from '../types/database'
+import type { EquipeEstoque, EstoqueContagem, EstoqueEquipeStatus, EstoqueItem } from '../types/database'
 
 interface InventarioContagemProps {
   itens: EstoqueItem[]
   contagens: EstoqueContagem[]
   equipe: EquipeEstoque
   usuarioId: string
+  statusEquipe: EstoqueEquipeStatus | undefined
   onContado: () => void
+  onStatusMudou: () => void
 }
 
 // Não mostra a quantidade do sistema durante a contagem, de propósito —
 // contagem às cegas evita que quem conta só copie o número esperado em vez
 // de contar de verdade.
-export function InventarioContagem({ itens, contagens, equipe, usuarioId, onContado }: InventarioContagemProps) {
+export function InventarioContagem({
+  itens,
+  contagens,
+  equipe,
+  usuarioId,
+  statusEquipe,
+  onContado,
+  onStatusMudou,
+}: InventarioContagemProps) {
   const [busca, setBusca] = useState('')
   const [itemSelecionado, setItemSelecionado] = useState<EstoqueItem | null>(null)
   const [quantidade, setQuantidade] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [mudandoStatus, setMudandoStatus] = useState(false)
   const inputBuscaRef = useRef<HTMLInputElement>(null)
   const inputQuantidadeRef = useRef<HTMLInputElement>(null)
+  const finalizada = Boolean(statusEquipe?.finalizada_em)
 
   const contagensDaEquipe = useMemo(() => contagens.filter((c) => c.equipe === equipe), [contagens, equipe])
 
@@ -78,10 +90,48 @@ export function InventarioContagem({ itens, contagens, equipe, usuarioId, onCont
     cancelarSelecao()
   }
 
+  async function finalizar() {
+    const confirmado = window.confirm(
+      `Finalizar a contagem da sua equipe? Vocês contaram ${contagensDaEquipe.length} de ${itens.length} itens. Dá pra reabrir depois se precisar.`
+    )
+    if (!confirmado) return
+    setMudandoStatus(true)
+    const { erro } = await finalizarContagemEquipe(equipe, usuarioId)
+    setMudandoStatus(false)
+    if (erro) {
+      window.alert(`Não foi possível finalizar: ${erro}`)
+      return
+    }
+    onStatusMudou()
+  }
+
+  async function reabrir() {
+    setMudandoStatus(true)
+    const { erro } = await reabrirContagemEquipe(equipe)
+    setMudandoStatus(false)
+    if (erro) {
+      window.alert(`Não foi possível reabrir: ${erro}`)
+      return
+    }
+    onStatusMudou()
+  }
+
   return (
     <div>
-      <div className="mb-4 rounded-md bg-secondary px-3 py-2 text-sm text-secondary-foreground">
-        Sua equipe já contou {contagensDaEquipe.length} de {itens.length} itens.
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md bg-secondary px-3 py-2 text-sm text-secondary-foreground">
+        <span>
+          Sua equipe já contou {contagensDaEquipe.length} de {itens.length} itens.
+          {finalizada && statusEquipe?.finalizada_em && ` Finalizada em ${formatDataHora(statusEquipe.finalizada_em)}.`}
+        </span>
+        {finalizada ? (
+          <Botao variante="secundaria" tamanho="sm" onClick={reabrir} disabled={mudandoStatus}>
+            Reabrir contagem
+          </Botao>
+        ) : (
+          <Botao variante="secundaria" tamanho="sm" onClick={finalizar} disabled={mudandoStatus}>
+            Finalizar contagem
+          </Botao>
+        )}
       </div>
 
       {!itemSelecionado ? (

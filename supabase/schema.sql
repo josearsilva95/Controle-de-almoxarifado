@@ -319,12 +319,57 @@ create policy estoque_contagens_update_propria_equipe
   );
 
 -- ============================================================
+-- estoque_equipes_status: marca quando uma equipe finaliza a contagem dela.
+-- Usado só pra decidir quando mostrar o relatório de itens que uma equipe
+-- não chegou a contar (a comparação de divergência de valor já aparece em
+-- tempo real sem depender disso — ver estoque_contagens).
+-- ============================================================
+
+create table public.estoque_equipes_status (
+  equipe text primary key check (equipe in ('equipe_1', 'equipe_2', 'equipe_3')),
+  finalizada_em timestamptz,
+  finalizada_por uuid references public.profiles (id)
+);
+
+alter table public.estoque_equipes_status enable row level security;
+
+create policy estoque_equipes_status_select_admin_ou_equipe
+  on public.estoque_equipes_status for select
+  to authenticated
+  using (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  );
+
+-- Só marca a própria equipe como finalizada (admin pode qualquer uma).
+create policy estoque_equipes_status_upsert_propria_equipe
+  on public.estoque_equipes_status for insert
+  to authenticated
+  with check (
+    public.is_admin()
+    or equipe = (select equipe_estoque from public.profiles where id = auth.uid())
+  );
+
+create policy estoque_equipes_status_update_propria_equipe
+  on public.estoque_equipes_status for update
+  to authenticated
+  using (
+    public.is_admin()
+    or equipe = (select equipe_estoque from public.profiles where id = auth.uid())
+  )
+  with check (
+    public.is_admin()
+    or equipe = (select equipe_estoque from public.profiles where id = auth.uid())
+  );
+
+-- ============================================================
 -- Realtime — habilita replicação para as tabelas usadas nos hooks
 -- ============================================================
 
 alter publication supabase_realtime add table public.pedidos;
 alter publication supabase_realtime add table public.pedido_sessoes;
 alter publication supabase_realtime add table public.estoque_contagens;
+alter publication supabase_realtime add table public.estoque_equipes_status;
 
 -- ============================================================
 -- Após rodar este schema:

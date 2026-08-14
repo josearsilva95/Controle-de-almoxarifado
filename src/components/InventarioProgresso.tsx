@@ -7,11 +7,14 @@ interface InventarioProgressoProps {
   contagens: EstoqueContagem[]
 }
 
-function Estatistica({ label, valor }: { label: string; valor: string }) {
+// O número contado vem sozinho e em destaque — o total fica pequeno embaixo,
+// separado, pra não dar a impressão de que a equipe já contou tudo.
+function Estatistica({ label, valor, deTotal }: { label: string; valor: number; deTotal?: number }) {
   return (
     <Cartao className="p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-card-foreground">{valor}</p>
+      {deTotal != null && <p className="text-xs text-muted-foreground">de {deTotal} itens</p>}
     </Cartao>
   )
 }
@@ -41,11 +44,12 @@ export function InventarioProgresso({ itens, contagens }: InventarioProgressoPro
   }, [itens, contagens])
 
   return (
-    <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <Estatistica label="Equipe 1 contou" valor={`${stats.equipe1} / ${stats.total}`} />
-      <Estatistica label="Equipe 2 contou" valor={`${stats.equipe2} / ${stats.total}`} />
-      <Estatistica label="Divergências" valor={String(stats.divergentes)} />
-      <Estatistica label="Resolvidas pela equipe 3" valor={`${stats.resolvidas} / ${stats.divergentes}`} />
+    <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <Estatistica label="Total de itens" valor={stats.total} />
+      <Estatistica label="Equipe 1 contou" valor={stats.equipe1} deTotal={stats.total} />
+      <Estatistica label="Equipe 2 contou" valor={stats.equipe2} deTotal={stats.total} />
+      <Estatistica label="Divergências" valor={stats.divergentes} />
+      <Estatistica label="Resolvidas pela equipe 3" valor={stats.resolvidas} deTotal={stats.divergentes} />
     </div>
   )
 }

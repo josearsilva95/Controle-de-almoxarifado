@@ -65,6 +65,12 @@ export interface EstoqueContagem {
   contado_em: string
 }
 
+export interface EstoqueEquipeStatus {
+  equipe: EquipeEstoque
+  finalizada_em: string | null
+  finalizada_por: string | null
+}
+
 export interface PedidoSessao {
   id: string
   pedido_id: string
