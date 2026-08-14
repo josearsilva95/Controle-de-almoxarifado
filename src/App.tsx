@@ -2,6 +2,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { RotaProtegida } from './auth/RotaProtegida'
 import { RotaAdmin } from './auth/RotaAdmin'
+import { RotaInventario } from './auth/RotaInventario'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { PedidosProvider } from './hooks/PedidosProvider'
 import { Login } from './pages/Login'
@@ -11,6 +12,7 @@ import { AdminColaboradores } from './pages/AdminColaboradores'
 import { AdminNovoColaborador } from './pages/AdminNovoColaborador'
 import { AdminRelatorios } from './pages/AdminRelatorios'
 import { AdminEstoque } from './pages/AdminEstoque'
+import { Inventario } from './pages/Inventario'
 import { FuncionarioTarefas } from './pages/FuncionarioTarefas'
 
 export function App() {
@@ -67,6 +69,14 @@ export function App() {
                   <RotaAdmin>
                     <AdminEstoque />
                   </RotaAdmin>
+                }
+              />
+              <Route
+                path="/inventario"
+                element={
+                  <RotaInventario>
+                    <Inventario />
+                  </RotaInventario>
                 }
               />
               <Route

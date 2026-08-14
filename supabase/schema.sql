@@ -18,6 +18,9 @@ create table public.profiles (
   -- Enxerga requisições/desempenho de todos os depósitos mesmo sem ser admin —
   -- concedido manualmente por conta específica (ex: líder de equipe), não por papel.
   lider_geral boolean not null default false,
+  -- Equipe do inventário de estoque (nula = não participa). equipe_1/equipe_2
+  -- contam de forma independente; equipe_3 resolve as divergências entre elas.
+  equipe_estoque text check (equipe_estoque in ('equipe_1', 'equipe_2', 'equipe_3')),
   created_at timestamptz not null default now()
 );
 
@@ -118,12 +121,19 @@ alter table public.pedidos enable row level security;
 alter table public.pedido_sessoes enable row level security;
 
 -- profiles: qualquer autenticado pode ler todos os perfis (precisa exibir
--- "iniciado por fulano" etc.). Nenhum insert/update é permitido pelo client —
--- contas são criadas manualmente pelo Supabase Studio.
+-- "iniciado por fulano" etc.). Criar/editar credenciais continua só pela Edge
+-- Function rapid-worker (service_role) — esse update aqui é só pra campos de
+-- dado simples que o admin ajusta direto pela UI, como a equipe do estoque.
 create policy profiles_select_autenticados
   on public.profiles for select
   to authenticated
   using (true);
+
+create policy profiles_update_admin
+  on public.profiles for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- pedidos: admin lê tudo; contas com lider_geral (ex: líder de equipe) também
 -- leem tudo, independente de depósito; demais funcionários só leem requisições
@@ -186,9 +196,10 @@ create policy pedido_sessoes_delete_admin
   using (public.is_admin());
 
 -- ============================================================
--- estoque_itens: catálogo de itens de estoque (código + descrição), usado
--- pra conferência física em auditoria. Por enquanto sem integração com
--- pedidos (não desconta automaticamente) — só cadastro, consulta e PDF.
+-- estoque_itens: catálogo de itens de estoque, carregado a partir do
+-- relatório oficial "Situação Estoque" — quantidade já é a quantidade real
+-- do sistema (soma por código quando há mais de um lote/rastreabilidade).
+-- Serve de base pro inventário: cada equipe conta por fora e compara.
 -- ============================================================
 
 create table public.estoque_itens (
@@ -199,8 +210,8 @@ create table public.estoque_itens (
   -- Livre (não é enum fixo) — vem da "Família" do sistema de origem, usada
   -- pra agrupar em abas na tela em vez de só buscar em uma lista enorme.
   categoria text,
-  -- Nullable: a carga inicial só tem código/descrição, quantidade é
-  -- preenchida depois conforme a auditoria avança.
+  -- Quantidade oficial do sistema (importada) — não é sobrescrita pelas
+  -- contagens do inventário, que ficam à parte em estoque_contagens.
   quantidade integer,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -217,12 +228,16 @@ create trigger estoque_itens_set_updated_at
 
 alter table public.estoque_itens enable row level security;
 
--- Só quem administra (admin ou líder com lider_geral) mexe no estoque por
--- enquanto — não tem tela de estoque para funcionário ainda.
-create policy estoque_itens_select_admin
+-- Leitura: quem administra, ou quem está numa equipe de inventário (precisa
+-- buscar itens pra contar, mas não gerencia o catálogo). Escrita continua
+-- só admin.
+create policy estoque_itens_select_admin_ou_equipe
   on public.estoque_itens for select
   to authenticated
-  using (public.is_admin());
+  using (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  );
 
 create policy estoque_itens_insert_admin
   on public.estoque_itens for insert
@@ -241,41 +256,67 @@ create policy estoque_itens_delete_admin
   using (public.is_admin());
 
 -- ============================================================
--- estoque_contagens: histórico de contagem física da auditoria — quem
--- contou quanto de cada item e quando. Uma linha por (item, pessoa que
--- contou); contar de novo atualiza a própria linha em vez de duplicar.
--- Também espelha o valor mais recente em estoque_itens.quantidade.
+-- estoque_contagens: contagem física do inventário, uma linha por
+-- (item, equipe) — equipe_1 e equipe_2 contam de forma independente;
+-- equipe_3 grava a contagem final nos itens em que elas divergem. Contar
+-- de novo pela mesma equipe atualiza a própria linha em vez de duplicar.
 -- ============================================================
 
 create table public.estoque_contagens (
   id uuid primary key default gen_random_uuid(),
   item_id uuid not null references public.estoque_itens (id) on delete cascade,
+  equipe text not null check (equipe in ('equipe_1', 'equipe_2', 'equipe_3')),
   quantidade integer not null,
   contado_por uuid not null references public.profiles (id),
   contado_em timestamptz not null default now(),
-  unique (item_id, contado_por)
+  unique (item_id, equipe)
 );
 
 create index estoque_contagens_item_id_idx on public.estoque_contagens (item_id);
 
 alter table public.estoque_contagens enable row level security;
 
-create policy estoque_contagens_select_admin
+-- Leitura liberada pra quem administra ou está em qualquer equipe — a
+-- equipe_3 precisa ver as contagens de equipe_1 e equipe_2 pra achar as
+-- divergências, e todo mundo se beneficia de ver o progresso geral.
+create policy estoque_contagens_select_admin_ou_equipe
   on public.estoque_contagens for select
   to authenticated
-  using (public.is_admin());
+  using (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  );
 
--- Só grava contagem em nome de si mesmo.
-create policy estoque_contagens_insert_propria
+-- Só grava contagem em nome de si mesmo e da própria equipe (admin pode
+-- gravar por qualquer equipe, útil pra correções).
+create policy estoque_contagens_insert_propria_equipe
   on public.estoque_contagens for insert
   to authenticated
-  with check (public.is_admin() and contado_por = auth.uid());
+  with check (
+    contado_por = auth.uid()
+    and (
+      public.is_admin()
+      or equipe = (select equipe_estoque from public.profiles where id = auth.uid())
+    )
+  );
 
-create policy estoque_contagens_update_propria
+create policy estoque_contagens_update_propria_equipe
   on public.estoque_contagens for update
   to authenticated
-  using (public.is_admin() and contado_por = auth.uid())
-  with check (public.is_admin() and contado_por = auth.uid());
+  using (
+    contado_por = auth.uid()
+    and (
+      public.is_admin()
+      or equipe = (select equipe_estoque from public.profiles where id = auth.uid())
+    )
+  )
+  with check (
+    contado_por = auth.uid()
+    and (
+      public.is_admin()
+      or equipe = (select equipe_estoque from public.profiles where id = auth.uid())
+    )
+  );
 
 -- ============================================================
 -- Realtime — habilita replicação para as tabelas usadas nos hooks

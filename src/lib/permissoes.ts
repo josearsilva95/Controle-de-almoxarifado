@@ -7,3 +7,10 @@ export function podeAdministrar(profile: Profile | null | undefined): boolean {
   if (!profile) return false
   return profile.role === 'admin' || (profile.role === 'lider' && profile.lider_geral)
 }
+
+// Acesso ao Inventário: quem administra (visão geral) ou quem foi colocado
+// numa equipe de contagem pelo admin — não depende do papel (role).
+export function podeAcessarInventario(profile: Profile | null | undefined): boolean {
+  if (!profile) return false
+  return podeAdministrar(profile) || profile.equipe_estoque !== null
+}

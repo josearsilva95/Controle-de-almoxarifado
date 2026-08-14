@@ -6,16 +6,20 @@ import { Cartao } from './ui/Cartao'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
 import { registrarContagem } from '../lib/acoesEstoque'
 import { formatDataHora } from '../lib/tempo'
-import type { EstoqueContagem, EstoqueItem } from '../types/database'
+import type { EquipeEstoque, EstoqueContagem, EstoqueItem } from '../types/database'
 
-interface EstoqueAuditoriaProps {
+interface InventarioContagemProps {
   itens: EstoqueItem[]
   contagens: EstoqueContagem[]
+  equipe: EquipeEstoque
   usuarioId: string
   onContado: () => void
 }
 
-export function EstoqueAuditoria({ itens, contagens, usuarioId, onContado }: EstoqueAuditoriaProps) {
+// Não mostra a quantidade do sistema durante a contagem, de propósito —
+// contagem às cegas evita que quem conta só copie o número esperado em vez
+// de contar de verdade.
+export function InventarioContagem({ itens, contagens, equipe, usuarioId, onContado }: InventarioContagemProps) {
   const [busca, setBusca] = useState('')
   const [itemSelecionado, setItemSelecionado] = useState<EstoqueItem | null>(null)
   const [quantidade, setQuantidade] = useState('')
@@ -24,23 +28,25 @@ export function EstoqueAuditoria({ itens, contagens, usuarioId, onContado }: Est
   const inputBuscaRef = useRef<HTMLInputElement>(null)
   const inputQuantidadeRef = useRef<HTMLInputElement>(null)
 
+  const contagensDaEquipe = useMemo(() => contagens.filter((c) => c.equipe === equipe), [contagens, equipe])
+
   const resultados = useMemo(() => {
     if (!busca.trim() || itemSelecionado) return []
     return filtrarItensEstoque(itens, busca).slice(0, 8)
   }, [itens, busca, itemSelecionado])
 
-  const minhasContagens = useMemo(() => {
+  const contagensComItem = useMemo(() => {
     const itensPorId = new Map(itens.map((i) => [i.id, i]))
-    return contagens
-      .filter((c) => c.contado_por === usuarioId)
+    return contagensDaEquipe
       .map((c) => ({ contagem: c, item: itensPorId.get(c.item_id) }))
       .filter((c): c is { contagem: EstoqueContagem; item: EstoqueItem } => Boolean(c.item))
       .sort((a, b) => new Date(b.contagem.contado_em).getTime() - new Date(a.contagem.contado_em).getTime())
-  }, [contagens, itens, usuarioId])
+  }, [contagensDaEquipe, itens])
 
   function selecionarItem(item: EstoqueItem) {
     setItemSelecionado(item)
-    setQuantidade(item.quantidade != null ? String(item.quantidade) : '')
+    const existente = contagensDaEquipe.find((c) => c.item_id === item.id)
+    setQuantidade(existente ? String(existente.quantidade) : '')
     setErro(null)
     setTimeout(() => inputQuantidadeRef.current?.focus(), 0)
   }
@@ -62,7 +68,7 @@ export function EstoqueAuditoria({ itens, contagens, usuarioId, onContado }: Est
     }
     setSalvando(true)
     setErro(null)
-    const { erro: erroAcao } = await registrarContagem(itemSelecionado.id, valor, usuarioId)
+    const { erro: erroAcao } = await registrarContagem(itemSelecionado.id, equipe, valor, usuarioId)
     setSalvando(false)
     if (erroAcao) {
       setErro(erroAcao)
@@ -75,7 +81,7 @@ export function EstoqueAuditoria({ itens, contagens, usuarioId, onContado }: Est
   return (
     <div>
       <div className="mb-4 rounded-md bg-secondary px-3 py-2 text-sm text-secondary-foreground">
-        {contagens.length} de {itens.length} itens já contados no total (todos os conferentes).
+        Sua equipe já contou {contagensDaEquipe.length} de {itens.length} itens.
       </div>
 
       {!itemSelecionado ? (
@@ -141,9 +147,9 @@ export function EstoqueAuditoria({ itens, contagens, usuarioId, onContado }: Est
         </Cartao>
       )}
 
-      <h3 className="mb-2 text-sm font-semibold text-card-foreground">Minhas contagens</h3>
-      {minhasContagens.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Você ainda não contou nenhum item.</p>
+      <h3 className="mb-2 text-sm font-semibold text-card-foreground">Contagens da sua equipe</h3>
+      {contagensComItem.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Sua equipe ainda não contou nenhum item.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full border-collapse text-sm">
@@ -156,7 +162,7 @@ export function EstoqueAuditoria({ itens, contagens, usuarioId, onContado }: Est
               </tr>
             </thead>
             <tbody>
-              {minhasContagens.map(({ contagem, item }) => (
+              {contagensComItem.map(({ contagem, item }) => (
                 <tr key={contagem.id} className="border-t border-border">
                   <td className="px-3 py-2.5 font-medium text-card-foreground">{item.codigo}</td>
                   <td className="px-3 py-2.5 text-card-foreground">{item.descricao}</td>

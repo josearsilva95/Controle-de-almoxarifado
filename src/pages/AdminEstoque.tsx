@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Download, Pencil, Search, Trash2 } from 'luc
 import { useAuth } from '../auth/useAuth'
 import { AppShell } from '../components/AppShell'
 import { EstoqueItemModal } from '../components/EstoqueItemModal'
-import { EstoqueAuditoria } from '../components/EstoqueAuditoria'
+import { EstoqueEquipes } from '../components/EstoqueEquipes'
 import { Botao, classesBotaoIcone } from '../components/ui/Botao'
 import { usePerfis } from '../hooks/usePerfis'
 import { useEstoque } from '../hooks/useEstoque'
@@ -12,18 +12,18 @@ import { supabase } from '../lib/supabaseClient'
 import { rotuloDeposito } from '../lib/depositos'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
 import { gerarPdfEstoque } from '../lib/estoquePdf'
-import { gerarPdfContagem } from '../lib/contagemPdf'
+import { gerarPdfInventario } from '../lib/inventarioPdf'
 import type { EstoqueItem } from '../types/database'
 
 const ITENS_POR_PAGINA = 50
 const SEM_CATEGORIA = 'Sem categoria'
-type Modo = 'catalogo' | 'auditoria'
+type Modo = 'catalogo' | 'equipes'
 
 export function AdminEstoque() {
   const { profile } = useAuth()
   const { itens, carregando, recarregar } = useEstoque()
-  const { contagens, carregando: carregandoContagens, recarregar: recarregarContagens } = useEstoqueContagens()
-  const perfis = usePerfis()
+  const { contagens } = useEstoqueContagens()
+  const { perfis, recarregar: recarregarPerfis } = usePerfis()
   const [modo, setModo] = useState<Modo>('catalogo')
   const [busca, setBusca] = useState('')
   const [categoriaAtiva, setCategoriaAtiva] = useState('todas')
@@ -73,27 +73,12 @@ export function AdminEstoque() {
   }
 
   function baixarPdf() {
-    if (modo === 'auditoria') {
-      const itensPorId = new Map(itens.map((i) => [i.id, i]))
-      const linhas = contagens
-        .map((c) => {
-          const item = itensPorId.get(c.item_id)
-          if (!item) return null
-          return {
-            codigo: item.codigo,
-            descricao: item.descricao,
-            categoria: item.categoria,
-            quantidade: c.quantidade,
-            contadoPor: perfis[c.contado_por]?.nome_completo ?? 'Desconhecido',
-            contadoEm: c.contado_em,
-          }
-        })
-        .filter((l): l is NonNullable<typeof l> => l !== null)
-      gerarPdfContagem(linhas)
-      return
-    }
     const rotulo = categoriaAtiva === 'todas' ? 'todos os itens' : categoriaAtiva
     gerarPdfEstoque(itensFiltrados, busca.trim() ? `${rotulo} · busca "${busca.trim()}"` : rotulo)
+  }
+
+  function baixarPdfInventario() {
+    gerarPdfInventario(itens, contagens)
   }
 
   if (!profile) return null
@@ -103,18 +88,20 @@ export function AdminEstoque() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Estoque</h2>
-          <p className="text-sm text-muted-foreground">Catálogo de itens para conferência na auditoria.</p>
+          <p className="text-sm text-muted-foreground">Catálogo oficial de itens e equipes do inventário.</p>
         </div>
         <div className="flex gap-2">
-          <Botao
-            variante="secundaria"
-            tamanho="sm"
-            onClick={baixarPdf}
-            disabled={modo === 'auditoria' ? contagens.length === 0 : itensFiltrados.length === 0}
-          >
-            <Download className="h-4 w-4" />
-            {modo === 'auditoria' ? 'Baixar PDF da contagem' : 'Baixar PDF'}
-          </Botao>
+          {modo === 'catalogo' ? (
+            <Botao variante="secundaria" tamanho="sm" onClick={baixarPdf} disabled={itensFiltrados.length === 0}>
+              <Download className="h-4 w-4" />
+              Baixar PDF
+            </Botao>
+          ) : (
+            <Botao variante="secundaria" tamanho="sm" onClick={baixarPdfInventario} disabled={itens.length === 0}>
+              <Download className="h-4 w-4" />
+              Baixar PDF do inventário
+            </Botao>
+          )}
           {modo === 'catalogo' && (
             <Botao tamanho="sm" onClick={() => setCriando(true)}>
               + Novo Item
@@ -136,25 +123,16 @@ export function AdminEstoque() {
         <button
           type="button"
           className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
-            modo === 'auditoria' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-card-foreground'
+            modo === 'equipes' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-card-foreground'
           }`}
-          onClick={() => setModo('auditoria')}
+          onClick={() => setModo('equipes')}
         >
-          Auditoria
+          Equipes
         </button>
       </div>
 
-      {modo === 'auditoria' ? (
-        carregando || carregandoContagens ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Carregando...</p>
-        ) : (
-          <EstoqueAuditoria
-            itens={itens}
-            contagens={contagens}
-            usuarioId={profile.id}
-            onContado={recarregarContagens}
-          />
-        )
+      {modo === 'equipes' ? (
+        <EstoqueEquipes perfis={perfis} onAtualizado={recarregarPerfis} />
       ) : (
         <>
           <div className="mb-4 flex items-center gap-2 rounded-md border border-input bg-card px-3 py-2 sm:max-w-sm">
@@ -230,7 +208,7 @@ export function AdminEstoque() {
                       <th className="px-3 py-2.5">Descrição</th>
                       <th className="px-3 py-2.5">Categoria</th>
                       <th className="px-3 py-2.5">Depósito</th>
-                      <th className="px-3 py-2.5">Quantidade</th>
+                      <th className="px-3 py-2.5">Qtd. sistema</th>
                       <th className="px-3 py-2.5 text-right">Ações</th>
                     </tr>
                   </thead>

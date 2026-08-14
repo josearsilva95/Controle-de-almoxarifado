@@ -16,7 +16,7 @@ import type { Profile } from '../types/database'
 
 export function AdminColaboradores() {
   const { pedidos, carregando: carregandoPedidos } = usePedidosContext()
-  const perfis = usePerfis()
+  const { perfis } = usePerfis()
   const { desempenho: todoDesempenho, carregando: carregandoDesempenho } = useDesempenhoColaboradores(pedidos)
   const [colaboradorEditando, setColaboradorEditando] = useState<Profile | null>(null)
   const carregando = carregandoPedidos || carregandoDesempenho

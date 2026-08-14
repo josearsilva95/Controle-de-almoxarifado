@@ -15,7 +15,7 @@ const RANK_URGENCIA: Record<Urgencia, number> = { urgente: 0, medio: 1, nao_urge
 export function FuncionarioTarefas() {
   const { profile } = useAuth()
   const { pedidos, carregando } = usePedidosContext()
-  const perfis = usePerfis()
+  const { perfis } = usePerfis()
   const [emProcessamento, setEmProcessamento] = useState<Set<string>>(new Set())
   const [mensagemErro, setMensagemErro] = useState<string | null>(null)
   const [pedidoPausando, setPedidoPausando] = useState<Pedido | null>(null)

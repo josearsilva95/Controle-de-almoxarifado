@@ -38,7 +38,7 @@ function percentual(parte: number, total: number): string {
 export function AdminDashboard() {
   const { profile } = useAuth()
   const { pedidos, carregando } = usePedidosContext()
-  const perfis = usePerfis()
+  const { perfis } = usePerfis()
   const [pedidoExpandido, setPedidoExpandido] = useState<string | null>(null)
   const [pedidoEditando, setPedidoEditando] = useState<Pedido | null>(null)
   const [abaAtiva, setAbaAtiva] = useState<Status | 'todas'>('todas')

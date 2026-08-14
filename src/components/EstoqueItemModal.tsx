@@ -96,7 +96,7 @@ export function EstoqueItemModal({ item, categoriasExistentes, onFechar, onSalvo
         </label>
 
         <label className="mb-4 flex flex-col gap-1 text-sm font-medium text-card-foreground">
-          Quantidade (opcional)
+          Quantidade no sistema (opcional)
           <input
             className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
             type="number"
@@ -104,7 +104,7 @@ export function EstoqueItemModal({ item, categoriasExistentes, onFechar, onSalvo
             step={1}
             value={quantidade}
             onChange={(e) => setQuantidade(e.target.value)}
-            placeholder="Ainda não conferida"
+            placeholder="Não informada"
           />
         </label>
 

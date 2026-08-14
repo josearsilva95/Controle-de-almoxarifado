@@ -1,7 +1,18 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { BarChart3, Boxes, ChevronLeft, ChevronRight, ClipboardList, LogOut, Package, Plus, Users } from 'lucide-react'
+import {
+  BarChart3,
+  Boxes,
+  CheckSquare,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  LogOut,
+  Package,
+  Plus,
+  Users,
+} from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { iniciaisDoNome, rotuloRole } from '../lib/cores'
 import { podeAdministrar } from '../lib/permissoes'
@@ -17,11 +28,13 @@ const LINKS_ADMIN = [
 ]
 
 function linksPara(profile: Profile): typeof LINKS_ADMIN {
-  if (podeAdministrar(profile)) return LINKS_ADMIN
-  if (profile.role === 'funcionario') {
-    return [{ to: '/tarefas', label: 'Minhas Requisições', icon: ClipboardList, fim: true }]
-  }
-  return []
+  const base = podeAdministrar(profile)
+    ? LINKS_ADMIN
+    : profile.role === 'funcionario'
+      ? [{ to: '/tarefas', label: 'Minhas Requisições', icon: ClipboardList, fim: true }]
+      : []
+  if (!profile.equipe_estoque) return base
+  return [...base, { to: '/inventario', label: 'Inventário', icon: CheckSquare, fim: true }]
 }
 
 function itemClasse(ativo: boolean): string {

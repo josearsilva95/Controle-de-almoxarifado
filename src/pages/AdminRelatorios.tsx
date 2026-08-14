@@ -37,7 +37,7 @@ function mesmoDia(a: string, b: string): boolean {
 
 export function AdminRelatorios() {
   const { pedidos, carregando } = usePedidosContext()
-  const perfis = usePerfis()
+  const { perfis } = usePerfis()
   const { desempenho } = useDesempenhoColaboradores(pedidos)
   const [colaboradorSelecionado, setColaboradorSelecionado] = useState<DesempenhoColaborador | null>(null)
 

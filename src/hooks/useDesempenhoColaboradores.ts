@@ -64,7 +64,7 @@ function tempoOciosoPorUsuario(sessoes: PedidoSessao[]): Map<string, number> {
  */
 export function useDesempenhoColaboradores(pedidos: Pedido[]) {
   const { sessoes, carregando: carregandoSessoes } = useTodasSessoes()
-  const perfis = usePerfis()
+  const { perfis } = usePerfis()
 
   const desempenho = useMemo<DesempenhoColaborador[]>(() => {
     const agora = new Date()

@@ -8,6 +8,8 @@ export type Deposito = 'deposito_1' | 'deposito_2' | 'deposito_3'
 
 export type MotivoPausa = 'falta_estoque' | 'empilhadeira' | 'equipamento_quebrado'
 
+export type EquipeEstoque = 'equipe_1' | 'equipe_2' | 'equipe_3'
+
 export interface Profile {
   id: string
   username: string
@@ -17,6 +19,7 @@ export interface Profile {
   deposito: Deposito | null
   oculto: boolean
   lider_geral: boolean
+  equipe_estoque: EquipeEstoque | null
   created_at: string
 }
 
@@ -56,6 +59,7 @@ export interface EstoqueItem {
 export interface EstoqueContagem {
   id: string
   item_id: string
+  equipe: EquipeEstoque
   quantidade: number
   contado_por: string
   contado_em: string
