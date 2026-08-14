@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { BarChart3, ChevronLeft, ChevronRight, ClipboardList, LogOut, Package, Plus, Users } from 'lucide-react'
+import { BarChart3, Boxes, ChevronLeft, ChevronRight, ClipboardList, LogOut, Package, Plus, Users } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { iniciaisDoNome, rotuloRole } from '../lib/cores'
 import { podeAdministrar } from '../lib/permissoes'
@@ -12,6 +12,7 @@ import type { Profile } from '../types/database'
 const LINKS_ADMIN = [
   { to: '/admin', label: 'Requisições', icon: ClipboardList, fim: true },
   { to: '/admin/colaboradores', label: 'Colaboradores', icon: Users, fim: false },
+  { to: '/admin/estoque', label: 'Estoque', icon: Boxes, fim: false },
   { to: '/admin/relatorios', label: 'Relatórios', icon: BarChart3, fim: false },
 ]
 

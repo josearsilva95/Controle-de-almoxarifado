@@ -186,6 +186,57 @@ create policy pedido_sessoes_delete_admin
   using (public.is_admin());
 
 -- ============================================================
+-- estoque_itens: catálogo de itens de estoque (código + descrição), usado
+-- pra conferência física em auditoria. Por enquanto sem integração com
+-- pedidos (não desconta automaticamente) — só cadastro, consulta e PDF.
+-- ============================================================
+
+create table public.estoque_itens (
+  id uuid primary key default gen_random_uuid(),
+  codigo text not null,
+  descricao text not null,
+  deposito text not null check (deposito in ('deposito_1', 'deposito_2', 'deposito_3')),
+  -- Nullable: a carga inicial só tem código/descrição, quantidade é
+  -- preenchida depois conforme a auditoria avança.
+  quantidade integer,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (codigo, deposito)
+);
+
+create index estoque_itens_codigo_idx on public.estoque_itens (codigo);
+
+create trigger estoque_itens_set_updated_at
+  before update on public.estoque_itens
+  for each row
+  execute function public.set_updated_at();
+
+alter table public.estoque_itens enable row level security;
+
+-- Só quem administra (admin ou líder com lider_geral) mexe no estoque por
+-- enquanto — não tem tela de estoque para funcionário ainda.
+create policy estoque_itens_select_admin
+  on public.estoque_itens for select
+  to authenticated
+  using (public.is_admin());
+
+create policy estoque_itens_insert_admin
+  on public.estoque_itens for insert
+  to authenticated
+  with check (public.is_admin());
+
+create policy estoque_itens_update_admin
+  on public.estoque_itens for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+create policy estoque_itens_delete_admin
+  on public.estoque_itens for delete
+  to authenticated
+  using (public.is_admin());
+
+-- ============================================================
 -- Realtime — habilita replicação para as tabelas usadas nos hooks
 -- ============================================================
 

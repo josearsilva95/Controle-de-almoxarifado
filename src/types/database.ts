@@ -42,6 +42,16 @@ export interface Pedido {
   updated_at: string
 }
 
+export interface EstoqueItem {
+  id: string
+  codigo: string
+  descricao: string
+  deposito: Deposito
+  quantidade: number | null
+  created_at: string
+  updated_at: string
+}
+
 export interface PedidoSessao {
   id: string
   pedido_id: string

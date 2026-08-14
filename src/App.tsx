@@ -10,6 +10,7 @@ import { AdminCadastrarPV } from './pages/AdminCadastrarPV'
 import { AdminColaboradores } from './pages/AdminColaboradores'
 import { AdminNovoColaborador } from './pages/AdminNovoColaborador'
 import { AdminRelatorios } from './pages/AdminRelatorios'
+import { AdminEstoque } from './pages/AdminEstoque'
 import { FuncionarioTarefas } from './pages/FuncionarioTarefas'
 
 export function App() {
@@ -57,6 +58,14 @@ export function App() {
                 element={
                   <RotaAdmin>
                     <AdminRelatorios />
+                  </RotaAdmin>
+                }
+              />
+              <Route
+                path="/admin/estoque"
+                element={
+                  <RotaAdmin>
+                    <AdminEstoque />
                   </RotaAdmin>
                 }
               />
