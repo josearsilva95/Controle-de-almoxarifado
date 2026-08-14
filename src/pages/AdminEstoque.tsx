@@ -5,6 +5,7 @@ import { AppShell } from '../components/AppShell'
 import { EstoqueItemModal } from '../components/EstoqueItemModal'
 import { EstoqueEquipes } from '../components/EstoqueEquipes'
 import { InventarioContagem } from '../components/InventarioContagem'
+import { InventarioContagensRecentes } from '../components/InventarioContagensRecentes'
 import { InventarioDivergencias } from '../components/InventarioDivergencias'
 import { InventarioPendencias } from '../components/InventarioPendencias'
 import { InventarioProgresso } from '../components/InventarioProgresso'
@@ -184,6 +185,7 @@ export function AdminEstoque() {
       {modo === 'inventario' && (
         <>
           <InventarioProgresso itens={itens} contagens={contagens} />
+          <InventarioContagensRecentes itens={itens} contagens={contagens} perfis={perfis} />
           <InventarioDivergencias
             itens={itens}
             contagens={contagens}
