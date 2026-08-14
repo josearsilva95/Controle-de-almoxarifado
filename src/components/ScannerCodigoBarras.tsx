@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { X } from 'lucide-react'
-import { classesBotaoIcone } from './ui/Botao'
 
 interface ScannerCodigoBarrasProps {
   onLido: (codigo: string) => void
@@ -48,27 +47,37 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
   }, [onLido])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onFechar}>
-      <div
-        className="w-full max-w-sm rounded-xl border border-border bg-card p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-card-foreground">Escanear código de barras</h2>
-          <button type="button" className={classesBotaoIcone()} onClick={onFechar} aria-label="Fechar">
-            <X className="h-4 w-4" />
-          </button>
+    <div className="fixed inset-0 z-50 bg-black">
+      {erro ? (
+        <div className="flex h-full items-center justify-center p-6">
+          <p className="max-w-xs text-center text-sm text-white">{erro}</p>
         </div>
+      ) : (
+        <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+      )}
 
-        {erro ? (
-          <p className="py-6 text-center text-sm text-destructive">{erro}</p>
-        ) : (
-          <div className="overflow-hidden rounded-md bg-black">
-            <video ref={videoRef} className="aspect-square w-full object-cover" muted playsInline />
-          </div>
-        )}
-        <p className="mt-3 text-center text-xs text-muted-foreground">Aponte a câmera pro código de barras da etiqueta.</p>
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent p-4 pb-10">
+        <h2 className="text-sm font-semibold text-white">Escanear código de barras</h2>
+        <button
+          type="button"
+          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+          onClick={onFechar}
+          aria-label="Fechar"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
+
+      {!erro && (
+        <>
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="aspect-[3/1] w-4/5 max-w-md rounded-lg border-2 border-white/80" />
+          </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-6 pt-10">
+            <p className="text-center text-sm text-white/90">Aponte a câmera pro código de barras da etiqueta.</p>
+          </div>
+        </>
+      )}
     </div>
   )
 }
