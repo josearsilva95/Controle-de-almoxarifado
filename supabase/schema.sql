@@ -241,6 +241,43 @@ create policy estoque_itens_delete_admin
   using (public.is_admin());
 
 -- ============================================================
+-- estoque_contagens: histórico de contagem física da auditoria — quem
+-- contou quanto de cada item e quando. Uma linha por (item, pessoa que
+-- contou); contar de novo atualiza a própria linha em vez de duplicar.
+-- Também espelha o valor mais recente em estoque_itens.quantidade.
+-- ============================================================
+
+create table public.estoque_contagens (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid not null references public.estoque_itens (id) on delete cascade,
+  quantidade integer not null,
+  contado_por uuid not null references public.profiles (id),
+  contado_em timestamptz not null default now(),
+  unique (item_id, contado_por)
+);
+
+create index estoque_contagens_item_id_idx on public.estoque_contagens (item_id);
+
+alter table public.estoque_contagens enable row level security;
+
+create policy estoque_contagens_select_admin
+  on public.estoque_contagens for select
+  to authenticated
+  using (public.is_admin());
+
+-- Só grava contagem em nome de si mesmo.
+create policy estoque_contagens_insert_propria
+  on public.estoque_contagens for insert
+  to authenticated
+  with check (public.is_admin() and contado_por = auth.uid());
+
+create policy estoque_contagens_update_propria
+  on public.estoque_contagens for update
+  to authenticated
+  using (public.is_admin() and contado_por = auth.uid())
+  with check (public.is_admin() and contado_por = auth.uid());
+
+-- ============================================================
 -- Realtime — habilita replicação para as tabelas usadas nos hooks
 -- ============================================================
 

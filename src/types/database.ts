@@ -53,6 +53,14 @@ export interface EstoqueItem {
   updated_at: string
 }
 
+export interface EstoqueContagem {
+  id: string
+  item_id: string
+  quantidade: number
+  contado_por: string
+  contado_em: string
+}
+
 export interface PedidoSessao {
   id: string
   pedido_id: string
