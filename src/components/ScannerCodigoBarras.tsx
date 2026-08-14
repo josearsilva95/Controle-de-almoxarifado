@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
-import { BarcodeFormat, DecodeHintType } from '@zxing/library'
-import { X } from 'lucide-react'
+import { BarcodeFormat, ChecksumException, DecodeHintType, FormatException, NotFoundException } from '@zxing/library'
+import { Camera, X } from 'lucide-react'
 
 interface ScannerCodigoBarrasProps {
   onLido: (codigo: string) => void
@@ -32,18 +32,24 @@ const DICAS = new Map<DecodeHintType, unknown>([
 // almoxarifado o código de barras é só a versão "pra máquina ler" do mesmo
 // número impresso embaixo dele, então o texto decodificado já é o código
 // que buscamos em estoque_itens.codigo, sem precisar de nenhuma conversão.
+//
+// Em vez de só decodificar continuamente em segundo plano (que em vários
+// aparelhos nunca acha nada porque o vídeo de preview vem sem foco de
+// verdade), o botão "Capturar" tira uma foto parada e decodifica ela —
+// isso força o navegador a focar antes de tirar a foto, bem mais confiável.
 export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const leitorRef = useRef<BrowserMultiFormatReader | null>(null)
   const [erro, setErro] = useState<string | null>(null)
+  const [avisoCaptura, setAvisoCaptura] = useState<string | null>(null)
+  const [capturando, setCapturando] = useState(false)
 
   useEffect(() => {
     const leitor = new BrowserMultiFormatReader(DICAS)
-    let controle: { stop: () => void } | null = null
+    leitorRef.current = leitor
+    let stream: MediaStream | null = null
     let cancelado = false
 
-    // Pede resolução alta e foco contínuo — a câmera "padrão" do
-    // getUserMedia costuma vir baixa/desfocada de perto, o que é
-    // exatamente a distância em que se lê um código de barras.
     const constraints: MediaStreamConstraints = {
       video: {
         facingMode: 'environment',
@@ -54,16 +60,18 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
       },
     }
 
-    leitor
-      .decodeFromConstraints(constraints, videoRef.current ?? undefined, (resultado, erroLeitura, ctrl) => {
-        controle = ctrl
-        if (cancelado) return
-        if (resultado) {
-          onLido(resultado.getText().trim())
+    navigator.mediaDevices
+      .getUserMedia(constraints)
+      .then((s) => {
+        if (cancelado) {
+          s.getTracks().forEach((t) => t.stop())
+          return
         }
-        // erroLeitura dispara a cada frame sem código visível — não é uma
-        // falha real, só significa "ainda não achou", então é ignorado.
-        void erroLeitura
+        stream = s
+        if (videoRef.current) {
+          videoRef.current.srcObject = s
+          videoRef.current.play().catch(() => {})
+        }
       })
       .catch((e: unknown) => {
         if (cancelado) return
@@ -76,9 +84,46 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
 
     return () => {
       cancelado = true
-      controle?.stop()
+      stream?.getTracks().forEach((t) => t.stop())
     }
-  }, [onLido])
+  }, [])
+
+  function capturar() {
+    const video = videoRef.current
+    const leitor = leitorRef.current
+    if (!video || !leitor || video.videoWidth === 0) return
+
+    setCapturando(true)
+    setAvisoCaptura(null)
+
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      setCapturando(false)
+      return
+    }
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    // Dá um instante pro autofoco assentar antes de decodificar — o
+    // getUserMedia às vezes só refoca quando percebe que o frame mudou.
+    setTimeout(() => {
+      try {
+        const resultado = leitor.decodeFromCanvas(canvas)
+        onLido(resultado.getText().trim())
+      } catch (e) {
+        setCapturando(false)
+        const naoAchou =
+          e instanceof NotFoundException || e instanceof ChecksumException || e instanceof FormatException
+        setAvisoCaptura(
+          naoAchou
+            ? 'Não achei um código de barras nessa foto. Aproxima, centraliza e tenta de novo.'
+            : 'Não consegui ler essa foto. Tenta de novo.'
+        )
+      }
+    }, 300)
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black">
@@ -103,14 +148,21 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
       </div>
 
       {!erro && (
-        <>
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="aspect-[3/1] w-4/5 max-w-md rounded-lg border-2 border-white/80" />
-          </div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-6 pt-10">
-            <p className="text-center text-sm text-white/90">Aponte a câmera pro código de barras da etiqueta.</p>
-          </div>
-        </>
+        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-4 bg-gradient-to-t from-black/80 to-transparent p-6 pt-16">
+          {avisoCaptura && <p className="text-center text-sm text-white">{avisoCaptura}</p>}
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black disabled:opacity-60"
+            onClick={capturar}
+            disabled={capturando}
+          >
+            <Camera className="h-5 w-5" />
+            {capturando ? 'Lendo...' : 'Capturar'}
+          </button>
+          <p className="text-center text-xs text-white/80">
+            Centraliza o código de barras na tela e aperta em Capturar.
+          </p>
+        </div>
       )}
     </div>
   )
