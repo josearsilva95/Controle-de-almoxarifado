@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Check } from 'lucide-react'
+import { Check, ScanBarcode } from 'lucide-react'
 import { Botao } from './ui/Botao'
 import { Cartao } from './ui/Cartao'
+import { ScannerCodigoBarras } from './ScannerCodigoBarras'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
 import { finalizarContagemEquipe, reabrirContagemEquipe, registrarContagem } from '../lib/acoesEstoque'
 import { formatDataHora } from '../lib/tempo'
@@ -36,6 +37,8 @@ export function InventarioContagem({
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [mudandoStatus, setMudandoStatus] = useState(false)
+  const [escaneando, setEscaneando] = useState(false)
+  const [erroBusca, setErroBusca] = useState<string | null>(null)
   const inputBuscaRef = useRef<HTMLInputElement>(null)
   const inputQuantidadeRef = useRef<HTMLInputElement>(null)
   const finalizada = Boolean(statusEquipe?.finalizada_em)
@@ -61,6 +64,17 @@ export function InventarioContagem({
     setQuantidade(existente ? String(existente.quantidade) : '')
     setErro(null)
     setTimeout(() => inputQuantidadeRef.current?.focus(), 0)
+  }
+
+  function handleCodigoLido(codigoLido: string) {
+    setEscaneando(false)
+    const item = itens.find((i) => i.codigo.toLowerCase() === codigoLido.toLowerCase())
+    if (!item) {
+      setErroBusca(`Nenhum item encontrado com o código "${codigoLido}".`)
+      return
+    }
+    setErroBusca(null)
+    selecionarItem(item)
   }
 
   function cancelarSelecao() {
@@ -135,34 +149,48 @@ export function InventarioContagem({
       </div>
 
       {!itemSelecionado ? (
-        <div className="relative mb-6 sm:max-w-sm">
-          <input
-            ref={inputBuscaRef}
-            className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-            type="text"
-            placeholder="Buscar item pra contar..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            autoFocus
-          />
-          {resultados.length > 0 && (
-            <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-border bg-card shadow-lg">
-              {resultados.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="block w-full border-b border-border px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted"
-                  onClick={() => selecionarItem(item)}
-                >
-                  <span className="font-medium text-card-foreground">{item.codigo}</span>{' '}
-                  <span className="text-muted-foreground">{item.descricao}</span>
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="mb-6 sm:max-w-sm">
+          <div className="relative flex items-center gap-2">
+            <input
+              ref={inputBuscaRef}
+              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+              type="text"
+              placeholder="Buscar item pra contar..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              autoFocus
+            />
+            <button
+              type="button"
+              className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
+              onClick={() => {
+                setErroBusca(null)
+                setEscaneando(true)
+              }}
+            >
+              <ScanBarcode className="h-4 w-4" />
+              <span className="hidden sm:inline">Escanear</span>
+            </button>
+            {resultados.length > 0 && (
+              <div className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-md border border-border bg-card shadow-lg">
+                {resultados.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="block w-full border-b border-border px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted"
+                    onClick={() => selecionarItem(item)}
+                  >
+                    <span className="font-medium text-card-foreground">{item.codigo}</span>{' '}
+                    <span className="text-muted-foreground">{item.descricao}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {busca.trim() && resultados.length === 0 && (
             <p className="mt-2 text-sm text-muted-foreground">Nenhum item encontrado.</p>
           )}
+          {erroBusca && <p className="mt-2 text-sm text-destructive">{erroBusca}</p>}
         </div>
       ) : (
         <Cartao className="mb-6 sm:max-w-sm">
@@ -224,6 +252,8 @@ export function InventarioContagem({
           </table>
         </div>
       )}
+
+      {escaneando && <ScannerCodigoBarras onLido={handleCodigoLido} onFechar={() => setEscaneando(false)} />}
     </div>
   )
 }
