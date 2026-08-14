@@ -8,30 +8,62 @@ interface ScannerCodigoBarrasProps {
   onFechar: () => void
 }
 
-// TRY_HARDER sem restringir POSSIBLE_FORMATS — deixa o ZXing tentar
-// qualquer simbologia de barra (não só as mais comuns), já que não temos
-// certeza de qual o sistema de origem usa nas etiquetas.
-const DICAS = new Map<DecodeHintType, unknown>([[DecodeHintType.TRY_HARDER, true]])
+// BarcodeDetector é a API nativa do navegador (Shape Detection API) — no
+// Android/Chrome ela usa o detector de código de barras do próprio sistema
+// (ML Kit), muito mais rápido e certeiro que qualquer decodificação em JS
+// puro. Ainda não existe em todo navegador (sem suporte no Safari/iOS,
+// Firefox), então isso aqui é só a tipagem mínima pra poder usar quando
+// disponível — com fallback pro ZXing (JS puro) quando não tiver.
+interface DetectedBarcode {
+  rawValue: string
+}
+interface BarcodeDetectorLike {
+  detect(source: CanvasImageSource): Promise<DetectedBarcode[]>
+}
+interface BarcodeDetectorConstructor {
+  new (options?: { formats?: string[] }): BarcodeDetectorLike
+  getSupportedFormats?: () => Promise<string[]>
+}
 
-const INTERVALO_TENTATIVA_MS = 350
+const FORMATOS_NATIVOS = [
+  'code_128',
+  'code_39',
+  'code_93',
+  'codabar',
+  'ean_13',
+  'ean_8',
+  'itf',
+  'upc_a',
+  'upc_e',
+  'qr_code',
+]
+
+// TRY_HARDER sem restringir POSSIBLE_FORMATS — deixa o ZXing (fallback)
+// tentar qualquer simbologia de barra, já que não temos certeza de qual o
+// sistema de origem usa nas etiquetas.
+const DICAS_ZXING = new Map<DecodeHintType, unknown>([[DecodeHintType.TRY_HARDER, true]])
+
+const INTERVALO_TENTATIVA_MS = 300
 
 // Lê o código de barras direto da câmera (sem OCR) — nas etiquetas do
 // almoxarifado o código de barras é só a versão "pra máquina ler" do mesmo
 // número impresso embaixo dele, então o texto decodificado já é o código
 // que buscamos em estoque_itens.codigo, sem precisar de nenhuma conversão.
 //
-// Decodifica tirando snapshots da câmera pra um canvas em intervalos
-// curtos (em vez de depender do loop de preview do ZXing, que em vários
-// aparelhos nunca focava) — automático, sem precisar apertar nada.
+// Usa a API nativa BarcodeDetector quando o navegador suporta (muito mais
+// confiável); cai pro ZXing (decodificação em JS via snapshot em canvas)
+// quando não suporta. Os dois tentam sozinhos em intervalos curtos, sem
+// precisar apertar nada.
 export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
-  const leitorRef = useRef(new BrowserMultiFormatReader(DICAS))
+  const leitorZxingRef = useRef(new BrowserMultiFormatReader(DICAS_ZXING))
   const trackRef = useRef<MediaStreamTrack | null>(null)
   const lidoRef = useRef(false)
   const [erro, setErro] = useState<string | null>(null)
   const [pronto, setPronto] = useState(false)
+  const [usandoNativo, setUsandoNativo] = useState(false)
   const [temLanterna, setTemLanterna] = useState(false)
   const [lanternaLigada, setLanternaLigada] = useState(false)
 
@@ -100,29 +132,51 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
         }
         setPronto(true)
 
+        const BarcodeDetectorCtor = (window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor })
+          .BarcodeDetector
+        const detectorNativo = BarcodeDetectorCtor ? new BarcodeDetectorCtor({ formats: FORMATOS_NATIVOS }) : null
+        setUsandoNativo(Boolean(detectorNativo))
+
         const canvas = canvasRef.current
-        intervalo = setInterval(() => {
+
+        async function tentarLer() {
           const video = videoRef.current
           if (lidoRef.current || !video || video.videoWidth === 0) return
+
+          if (detectorNativo) {
+            try {
+              const codigos = await detectorNativo.detect(video)
+              if (codigos.length > 0 && !lidoRef.current) {
+                confirmarLeitura(codigos[0].rawValue)
+              }
+            } catch {
+              // Frame ilegível — tenta de novo no próximo intervalo.
+            }
+            return
+          }
+
           canvas.width = video.videoWidth
           canvas.height = video.videoHeight
           const ctx = canvas.getContext('2d')
           if (!ctx) return
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
           try {
-            const resultado = leitorRef.current.decodeFromCanvas(canvas)
-            if (!lidoRef.current) {
-              lidoRef.current = true
-              if (navigator.vibrate) navigator.vibrate(120)
-              onLido(resultado.getText().trim())
-            }
+            const resultado = leitorZxingRef.current.decodeFromCanvas(canvas)
+            if (!lidoRef.current) confirmarLeitura(resultado.getText())
           } catch (e) {
-            // Frame sem código legível — normal, tenta de novo no próximo intervalo.
             if (!(e instanceof NotFoundException || e instanceof ChecksumException || e instanceof FormatException)) {
               console.error('Erro inesperado ao decodificar:', e)
             }
           }
-        }, INTERVALO_TENTATIVA_MS)
+        }
+
+        function confirmarLeitura(texto: string) {
+          lidoRef.current = true
+          if (navigator.vibrate) navigator.vibrate(120)
+          onLido(texto.trim())
+        }
+
+        intervalo = setInterval(tentarLer, INTERVALO_TENTATIVA_MS)
       })
       .catch((e: unknown) => {
         if (cancelado) return
@@ -201,6 +255,11 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
           <p className="text-center text-sm text-white/90">
             {pronto ? 'Centraliza o código de barras — a leitura é automática.' : 'Abrindo câmera...'}
           </p>
+          {pronto && !usandoNativo && (
+            <p className="mt-1 text-center text-xs text-white/60">
+              Esse navegador não tem leitor nativo — usando leitura alternativa (pode ser mais lenta).
+            </p>
+          )}
         </div>
       )}
 
