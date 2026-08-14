@@ -24,6 +24,7 @@ const INTERVALO_TENTATIVA_MS = 350
 // curtos (em vez de depender do loop de preview do ZXing, que em vários
 // aparelhos nunca focava) — automático, sem precisar apertar nada.
 export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
   const leitorRef = useRef(new BrowserMultiFormatReader(DICAS))
@@ -33,6 +34,37 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
   const [pronto, setPronto] = useState(false)
   const [temLanterna, setTemLanterna] = useState(false)
   const [lanternaLigada, setLanternaLigada] = useState(false)
+
+  // Trava a orientação em paisagem enquanto o scanner está aberto — sem
+  // isso, se o celular do usuário estiver com a rotação automática do
+  // sistema desligada (comum), deitar o aparelho não vira a tela. Exige
+  // tela cheia na maioria dos navegadores; onde não suporta (ex: iOS
+  // Safari), o vídeo ainda acompanha a rotação normalmente se o sistema
+  // permitir.
+  useEffect(() => {
+    async function travarPaisagem() {
+      try {
+        if (containerRef.current?.requestFullscreen) {
+          await containerRef.current.requestFullscreen()
+        }
+        const orientation = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }
+        await orientation.lock?.('landscape')
+      } catch {
+        // Não suportado nesse navegador/aparelho — segue sem travar.
+      }
+    }
+    travarPaisagem()
+
+    return () => {
+      const orientation = screen.orientation as ScreenOrientation & { unlock?: () => void }
+      try {
+        orientation.unlock?.()
+      } catch {
+        // Ignora — só limpa se der.
+      }
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    }
+  }, [])
 
   useEffect(() => {
     let stream: MediaStream | null = null
@@ -122,7 +154,7 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black">
+    <div ref={containerRef} className="fixed inset-0 z-50 bg-black">
       {erro ? (
         <div className="flex h-full items-center justify-center p-6">
           <p className="max-w-xs text-center text-sm text-white">{erro}</p>
