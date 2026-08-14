@@ -1,53 +1,42 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
-import { BarcodeFormat, ChecksumException, DecodeHintType, FormatException, NotFoundException } from '@zxing/library'
-import { Camera, X } from 'lucide-react'
+import { ChecksumException, DecodeHintType, FormatException, NotFoundException } from '@zxing/library'
+import { Flashlight, FlashlightOff, X } from 'lucide-react'
 
 interface ScannerCodigoBarrasProps {
   onLido: (codigo: string) => void
   onFechar: () => void
 }
 
-// Restringe aos formatos de barra comuns em etiqueta de almoxarifado (em vez
-// de tentar todos, incluindo QR) e pede pra tentar mais — mais lento por
-// frame, mas bem mais certeiro, que é o que importa numa leitura pontual.
-const DICAS = new Map<DecodeHintType, unknown>([
-  [
-    DecodeHintType.POSSIBLE_FORMATS,
-    [
-      BarcodeFormat.CODE_128,
-      BarcodeFormat.CODE_39,
-      BarcodeFormat.EAN_13,
-      BarcodeFormat.EAN_8,
-      BarcodeFormat.UPC_A,
-      BarcodeFormat.UPC_E,
-      BarcodeFormat.ITF,
-      BarcodeFormat.CODABAR,
-    ],
-  ],
-  [DecodeHintType.TRY_HARDER, true],
-])
+// TRY_HARDER sem restringir POSSIBLE_FORMATS — deixa o ZXing tentar
+// qualquer simbologia de barra (não só as mais comuns), já que não temos
+// certeza de qual o sistema de origem usa nas etiquetas.
+const DICAS = new Map<DecodeHintType, unknown>([[DecodeHintType.TRY_HARDER, true]])
+
+const INTERVALO_TENTATIVA_MS = 350
 
 // Lê o código de barras direto da câmera (sem OCR) — nas etiquetas do
 // almoxarifado o código de barras é só a versão "pra máquina ler" do mesmo
 // número impresso embaixo dele, então o texto decodificado já é o código
 // que buscamos em estoque_itens.codigo, sem precisar de nenhuma conversão.
 //
-// Em vez de só decodificar continuamente em segundo plano (que em vários
-// aparelhos nunca acha nada porque o vídeo de preview vem sem foco de
-// verdade), o botão "Capturar" tira uma foto parada e decodifica ela —
-// isso força o navegador a focar antes de tirar a foto, bem mais confiável.
+// Decodifica tirando snapshots da câmera pra um canvas em intervalos
+// curtos (em vez de depender do loop de preview do ZXing, que em vários
+// aparelhos nunca focava) — automático, sem precisar apertar nada.
 export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const leitorRef = useRef<BrowserMultiFormatReader | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
+  const leitorRef = useRef(new BrowserMultiFormatReader(DICAS))
+  const trackRef = useRef<MediaStreamTrack | null>(null)
+  const lidoRef = useRef(false)
   const [erro, setErro] = useState<string | null>(null)
-  const [avisoCaptura, setAvisoCaptura] = useState<string | null>(null)
-  const [capturando, setCapturando] = useState(false)
+  const [pronto, setPronto] = useState(false)
+  const [temLanterna, setTemLanterna] = useState(false)
+  const [lanternaLigada, setLanternaLigada] = useState(false)
 
   useEffect(() => {
-    const leitor = new BrowserMultiFormatReader(DICAS)
-    leitorRef.current = leitor
     let stream: MediaStream | null = null
+    let intervalo: ReturnType<typeof setInterval> | null = null
     let cancelado = false
 
     const constraints: MediaStreamConstraints = {
@@ -68,10 +57,40 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
           return
         }
         stream = s
+        const track = s.getVideoTracks()[0]
+        trackRef.current = track ?? null
+        // @ts-expect-error torch não está no tipo padrão de MediaTrackCapabilities
+        setTemLanterna(Boolean(track?.getCapabilities?.().torch))
+
         if (videoRef.current) {
           videoRef.current.srcObject = s
           videoRef.current.play().catch(() => {})
         }
+        setPronto(true)
+
+        const canvas = canvasRef.current
+        intervalo = setInterval(() => {
+          const video = videoRef.current
+          if (lidoRef.current || !video || video.videoWidth === 0) return
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+          try {
+            const resultado = leitorRef.current.decodeFromCanvas(canvas)
+            if (!lidoRef.current) {
+              lidoRef.current = true
+              if (navigator.vibrate) navigator.vibrate(120)
+              onLido(resultado.getText().trim())
+            }
+          } catch (e) {
+            // Frame sem código legível — normal, tenta de novo no próximo intervalo.
+            if (!(e instanceof NotFoundException || e instanceof ChecksumException || e instanceof FormatException)) {
+              console.error('Erro inesperado ao decodificar:', e)
+            }
+          }
+        }, INTERVALO_TENTATIVA_MS)
       })
       .catch((e: unknown) => {
         if (cancelado) return
@@ -84,45 +103,22 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
 
     return () => {
       cancelado = true
+      if (intervalo) clearInterval(intervalo)
       stream?.getTracks().forEach((t) => t.stop())
     }
-  }, [])
+  }, [onLido])
 
-  function capturar() {
-    const video = videoRef.current
-    const leitor = leitorRef.current
-    if (!video || !leitor || video.videoWidth === 0) return
-
-    setCapturando(true)
-    setAvisoCaptura(null)
-
-    const canvas = document.createElement('canvas')
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    const ctx = canvas.getContext('2d')
-    if (!ctx) {
-      setCapturando(false)
-      return
+  async function alternarLanterna() {
+    const track = trackRef.current
+    if (!track) return
+    const ligar = !lanternaLigada
+    try {
+      // @ts-expect-error torch não está no tipo padrão de MediaTrackConstraintSet
+      await track.applyConstraints({ advanced: [{ torch: ligar }] })
+      setLanternaLigada(ligar)
+    } catch {
+      // Alguns navegadores expõem a capacidade mas recusam o ajuste — ignora.
     }
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    // Dá um instante pro autofoco assentar antes de decodificar — o
-    // getUserMedia às vezes só refoca quando percebe que o frame mudou.
-    setTimeout(() => {
-      try {
-        const resultado = leitor.decodeFromCanvas(canvas)
-        onLido(resultado.getText().trim())
-      } catch (e) {
-        setCapturando(false)
-        const naoAchou =
-          e instanceof NotFoundException || e instanceof ChecksumException || e instanceof FormatException
-        setAvisoCaptura(
-          naoAchou
-            ? 'Não achei um código de barras nessa foto. Aproxima, centraliza e tenta de novo.'
-            : 'Não consegui ler essa foto. Tenta de novo.'
-        )
-      }
-    }, 300)
   }
 
   return (
@@ -137,33 +133,52 @@ export function ScannerCodigoBarras({ onLido, onFechar }: ScannerCodigoBarrasPro
 
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent p-4 pb-10">
         <h2 className="text-sm font-semibold text-white">Escanear código de barras</h2>
-        <button
-          type="button"
-          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
-          onClick={onFechar}
-          aria-label="Fechar"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
-      {!erro && (
-        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-4 bg-gradient-to-t from-black/80 to-transparent p-6 pt-16">
-          {avisoCaptura && <p className="text-center text-sm text-white">{avisoCaptura}</p>}
+        <div className="pointer-events-auto flex items-center gap-2">
+          {temLanterna && (
+            <button
+              type="button"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+              onClick={alternarLanterna}
+              aria-label={lanternaLigada ? 'Desligar lanterna' : 'Ligar lanterna'}
+            >
+              {lanternaLigada ? <FlashlightOff className="h-5 w-5" /> : <Flashlight className="h-5 w-5" />}
+            </button>
+          )}
           <button
             type="button"
-            className="flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black disabled:opacity-60"
-            onClick={capturar}
-            disabled={capturando}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+            onClick={onFechar}
+            aria-label="Fechar"
           >
-            <Camera className="h-5 w-5" />
-            {capturando ? 'Lendo...' : 'Capturar'}
+            <X className="h-5 w-5" />
           </button>
-          <p className="text-center text-xs text-white/80">
-            Centraliza o código de barras na tela e aperta em Capturar.
+        </div>
+      </div>
+
+      {!erro && pronto && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="relative aspect-[5/2] w-[85%] max-w-md overflow-hidden rounded-xl">
+            <div className="absolute inset-0 rounded-xl border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
+            <div className="absolute inset-x-0 top-0 h-0.5 animate-[varrer_1.8s_ease-in-out_infinite] bg-primary shadow-[0_0_8px_2px] shadow-primary" />
+          </div>
+        </div>
+      )}
+
+      {!erro && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-6 pt-12">
+          <p className="text-center text-sm text-white/90">
+            {pronto ? 'Centraliza o código de barras — a leitura é automática.' : 'Abrindo câmera...'}
           </p>
         </div>
       )}
+
+      <style>{`
+        @keyframes varrer {
+          0% { top: 4%; }
+          50% { top: 92%; }
+          100% { top: 4%; }
+        }
+      `}</style>
     </div>
   )
 }
