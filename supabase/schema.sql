@@ -362,6 +362,16 @@ create policy estoque_equipes_status_update_propria_equipe
     or equipe = (select equipe_estoque from public.profiles where id = auth.uid())
   );
 
+-- "Reabrir contagem" apaga a linha de status — sem essa policy o RLS
+-- bloqueia o delete silenciosamente, mesmo pra admin.
+create policy estoque_equipes_status_delete_propria_equipe
+  on public.estoque_equipes_status for delete
+  to authenticated
+  using (
+    public.is_admin()
+    or equipe = (select equipe_estoque from public.profiles where id = auth.uid())
+  );
+
 -- ============================================================
 -- Realtime — habilita replicação para as tabelas usadas nos hooks
 -- ============================================================

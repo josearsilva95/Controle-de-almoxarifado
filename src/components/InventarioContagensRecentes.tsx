@@ -13,14 +13,16 @@ const LIMITE = 100
 
 // Feed ao vivo de cada contagem registrada (qualquer equipe) — pra
 // acompanhar os valores sendo lançados conforme o inventário acontece, não
-// só o resumo agregado. Já vem ordenado do mais recente pro mais antigo
-// porque useEstoqueContagens já busca nessa ordem e atualiza via Realtime.
+// só o resumo agregado. Ordena aqui mesmo (não confia na ordem do hook) —
+// uma recontagem chega via Realtime como UPDATE e ficaria na posição
+// antiga da lista se só confiássemos na ordem de inserção.
 export function InventarioContagensRecentes({ itens, contagens, perfis }: InventarioContagensRecentesProps) {
   const linhas = useMemo(() => {
     const itensPorId = new Map(itens.map((i) => [i.id, i]))
     return contagens
       .map((c) => ({ contagem: c, item: itensPorId.get(c.item_id) }))
       .filter((l): l is { contagem: EstoqueContagem; item: EstoqueItem } => Boolean(l.item))
+      .sort((a, b) => new Date(b.contagem.contado_em).getTime() - new Date(a.contagem.contado_em).getTime())
       .slice(0, LIMITE)
   }, [contagens, itens])
 
