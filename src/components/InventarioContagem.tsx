@@ -324,6 +324,11 @@ export function InventarioContagem({
                     autoFocus
                   />
                 </label>
+                {!localAtivo && (
+                  <p className="mb-3 text-sm text-amber-600">
+                    Selecione um local ativo (acima) antes de confirmar — o botão fica desabilitado até lá.
+                  </p>
+                )}
                 {erro && <p className="mb-3 text-sm text-destructive">{erro}</p>}
                 <div className="flex gap-2">
                   <Botao type="button" variante="secundaria" onClick={cancelarSelecao}>

@@ -87,6 +87,9 @@ function LinhaItemCiclo({
             <Check className="h-4 w-4" />
             {salvando ? 'Salvando...' : 'Confirmar'}
           </Botao>
+          {!localAtivo && (
+            <p className="mt-1 w-full text-xs text-amber-600">Selecione um local ativo (acima) pra poder confirmar.</p>
+          )}
           {erro && <p className="mt-1 w-full text-xs text-destructive">{erro}</p>}
         </form>
       )}

@@ -112,6 +112,7 @@ function LinhaDivergencia({
                 <Check className="h-4 w-4" />
               </button>
             </div>
+            {!localAtivo && <p className="mt-1 text-xs text-amber-600">Selecione um local ativo pra salvar.</p>}
             {erro && <p className="mt-1 text-xs text-destructive">{erro}</p>}
           </>
         )}
