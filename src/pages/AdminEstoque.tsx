@@ -11,12 +11,14 @@ import { InventarioPendencias } from '../components/InventarioPendencias'
 import { InventarioProgresso } from '../components/InventarioProgresso'
 import { RelatorioInventarioAlertas } from '../components/RelatorioInventarioAlertas'
 import { EstoqueLocais } from '../components/EstoqueLocais'
+import { ContagemCiclica } from '../components/ContagemCiclica'
 import { Botao, classesBotaoIcone } from '../components/ui/Botao'
 import { usePerfis } from '../hooks/usePerfis'
 import { useEstoque } from '../hooks/useEstoque'
 import { useEstoqueContagens } from '../hooks/useEstoqueContagens'
 import { useEstoqueEquipesStatus } from '../hooks/useEstoqueEquipesStatus'
 import { useEstoqueLocais } from '../hooks/useEstoqueLocais'
+import { useEstoqueCiclosContext } from '../hooks/useEstoqueCiclosContext'
 import { supabase } from '../lib/supabaseClient'
 import { rotuloDeposito } from '../lib/depositos'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
@@ -30,7 +32,7 @@ import type { EstoqueItem } from '../types/database'
 
 const ITENS_POR_PAGINA = 50
 const SEM_CATEGORIA = 'Sem categoria'
-type Modo = 'catalogo' | 'equipes' | 'locais' | 'inventario'
+type Modo = 'catalogo' | 'equipes' | 'locais' | 'ciclica' | 'inventario'
 type EscopoRelatorio = 'geral' | 'equipe_1' | 'equipe_2' | 'divergencias'
 
 const OPCOES_ESCOPO_RELATORIO: { valor: EscopoRelatorio; rotulo: string }[] = [
@@ -46,6 +48,7 @@ export function AdminEstoque() {
   const { contagens, recarregar: recarregarContagens } = useEstoqueContagens()
   const { status: statusEquipes, recarregar: recarregarStatus } = useEstoqueEquipesStatus()
   const { locais, recarregar: recarregarLocais } = useEstoqueLocais()
+  const { ciclo, itens: itensCiclo, carregando: carregandoCiclo, recarregar: recarregarCiclo } = useEstoqueCiclosContext()
   const { perfis, recarregar: recarregarPerfis } = usePerfis()
   const [modo, setModo] = useState<Modo>('catalogo')
   const [escopoRelatorio, setEscopoRelatorio] = useState<EscopoRelatorio>('geral')
@@ -156,6 +159,17 @@ export function AdminEstoque() {
             : 'Busque o item e registre a quantidade contada.'}
         </p>
 
+        <h3 className="mb-3 text-base font-semibold text-foreground">Contagem cíclica de hoje</h3>
+        <ContagemCiclica
+          ciclo={ciclo}
+          itens={itensCiclo}
+          locais={locais}
+          usuarioId={profile.id}
+          carregando={carregandoCiclo}
+          onAtualizado={recarregarCiclo}
+        />
+        <hr className="my-6 border-border" />
+
         {(profile.equipe_estoque === 'equipe_1' || profile.equipe_estoque === 'equipe_2') && (
           <InventarioContagem
             itens={itens}
@@ -246,6 +260,7 @@ export function AdminEstoque() {
             ['catalogo', 'Catálogo'],
             ['equipes', 'Equipes'],
             ['locais', 'Locais'],
+            ['ciclica', 'Cíclica'],
             ['inventario', 'Inventário'],
           ] as const
         ).map(([valor, rotulo]) => (
@@ -265,6 +280,17 @@ export function AdminEstoque() {
       {modo === 'equipes' && <EstoqueEquipes perfis={perfis} onAtualizado={recarregarPerfis} />}
 
       {modo === 'locais' && <EstoqueLocais locais={locais} onAtualizado={recarregarLocais} />}
+
+      {modo === 'ciclica' && (
+        <ContagemCiclica
+          ciclo={ciclo}
+          itens={itensCiclo}
+          locais={locais}
+          usuarioId={profile.id}
+          carregando={carregandoCiclo}
+          onAtualizado={recarregarCiclo}
+        />
+      )}
 
       {modo === 'inventario' && (
         <>

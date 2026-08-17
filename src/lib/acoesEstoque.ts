@@ -84,3 +84,49 @@ export async function reiniciarInventario(): Promise<ResultadoAcao> {
 
   return { erro: null }
 }
+
+// Grava o resultado da contagem cíclica de um item do dia. Depois de gravar,
+// checa se os 10 itens do ciclo já foram todos contados e, se sim, marca o
+// ciclo como finalizado — é o que dispara o alerta pra quem acompanha.
+export async function registrarContagemCiclica(
+  cicloItemId: string,
+  cicloId: string,
+  quantidade: number,
+  local: string,
+  usuarioId: string
+): Promise<ResultadoAcao> {
+  const { error } = await supabase
+    .from('estoque_ciclos_itens')
+    .update({
+      quantidade_contada: quantidade,
+      local,
+      contado_por: usuarioId,
+      contado_em: new Date().toISOString(),
+    })
+    .eq('id', cicloItemId)
+  if (error) return { erro: error.message }
+
+  const { data: itensDoCiclo, error: erroItens } = await supabase
+    .from('estoque_ciclos_itens')
+    .select('quantidade_contada')
+    .eq('ciclo_id', cicloId)
+  if (!erroItens && itensDoCiclo && itensDoCiclo.every((i) => i.quantidade_contada != null)) {
+    await supabase
+      .from('estoque_ciclos')
+      .update({ finalizado_em: new Date().toISOString() })
+      .eq('id', cicloId)
+      .is('finalizado_em', null)
+  }
+
+  return { erro: null }
+}
+
+// Marca que alguém já viu o alerta e baixou o PDF — some da tela depois disso.
+export async function marcarCicloVisto(cicloId: string, usuarioId: string): Promise<ResultadoAcao> {
+  const { error } = await supabase
+    .from('estoque_ciclos')
+    .update({ visto_por: usuarioId, visto_em: new Date().toISOString() })
+    .eq('id', cicloId)
+  if (error) return { erro: error.message }
+  return { erro: null }
+}

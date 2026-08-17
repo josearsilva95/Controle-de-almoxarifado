@@ -5,6 +5,7 @@ import { RotaAdmin } from './auth/RotaAdmin'
 import { RotaEstoque } from './auth/RotaEstoque'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { PedidosProvider } from './hooks/PedidosProvider'
+import { EstoqueCiclosProvider } from './hooks/EstoqueCiclosProvider'
 import { Login } from './pages/Login'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { AdminCadastrarPV } from './pages/AdminCadastrarPV'
@@ -20,6 +21,7 @@ export function App() {
       <AuthProvider>
         <HashRouter>
           <PedidosProvider>
+          <EstoqueCiclosProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route
@@ -81,6 +83,7 @@ export function App() {
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
+          </EstoqueCiclosProvider>
           </PedidosProvider>
         </HashRouter>
       </AuthProvider>

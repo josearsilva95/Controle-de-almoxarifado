@@ -4,7 +4,7 @@ import type { CellHookData } from 'jspdf-autotable'
 import { compararContagens, compararTotaisPorItem } from './inventarioComparacao'
 import type { LinhaItem, LinhaLote } from './inventarioComparacao'
 import { rotuloDeposito } from './depositos'
-import type { EstoqueContagem, EstoqueItem } from '../types/database'
+import type { EstoqueCiclo, EstoqueCicloItemComItem, EstoqueContagem, EstoqueItem } from '../types/database'
 
 const VERMELHO_DIVERGENCIA: [number, number, number] = [185, 28, 28]
 
@@ -123,4 +123,36 @@ export function gerarPdfDivergencias(itens: EstoqueItem[], contagens: EstoqueCon
   })
 
   doc.save(`inventario-divergencias-${new Date().toISOString().slice(0, 10)}.pdf`)
+}
+
+// Resultado da contagem cíclica diária (10 itens sorteados) — linhas
+// divergentes (contagem ≠ saldo do sistema) ficam em vermelho.
+export function gerarPdfCicloContagem(ciclo: EstoqueCiclo, itens: EstoqueCicloItemComItem[]) {
+  const doc = novoDocInventario(
+    `Contagem cíclica — ${new Date(ciclo.data_referencia).toLocaleDateString('pt-BR')}`,
+    itens.length
+  )
+
+  autoTable(doc, {
+    startY: 34,
+    head: [['Código', 'Descrição', 'Categoria', 'Depósito', 'Local', 'Qtd. sistema', 'Qtd. contada']],
+    body: itens.map((i) => [
+      i.item.codigo,
+      i.item.descricao,
+      i.item.categoria || '—',
+      rotuloDeposito(i.item.deposito),
+      i.local || '—',
+      i.item.quantidade != null ? String(i.item.quantidade) : '—',
+      i.quantidade_contada != null ? String(i.quantidade_contada) : '—',
+    ]),
+    theme: 'striped',
+    headStyles: { fillColor: [59, 91, 219], fontSize: 8 },
+    styles: { fontSize: 8, cellPadding: 2 },
+    didParseCell: destacarLinhas(
+      itens,
+      (i) => i.quantidade_contada != null && i.item.quantidade != null && i.quantidade_contada !== i.item.quantidade
+    ),
+  })
+
+  doc.save(`contagem-ciclica-${ciclo.data_referencia}.pdf`)
 }

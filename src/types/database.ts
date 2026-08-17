@@ -20,6 +20,7 @@ export interface Profile {
   oculto: boolean
   lider_geral: boolean
   equipe_estoque: EquipeEstoque | null
+  recebe_alerta_ciclo: boolean
   created_at: string
 }
 
@@ -75,6 +76,29 @@ export interface EstoqueLocal {
   codigo: string
   rotulo: string | null
   created_at: string
+}
+
+export interface EstoqueCiclo {
+  id: string
+  data_referencia: string
+  gerado_em: string
+  finalizado_em: string | null
+  visto_por: string | null
+  visto_em: string | null
+}
+
+export interface EstoqueCicloItem {
+  id: string
+  ciclo_id: string
+  item_id: string
+  quantidade_contada: number | null
+  local: string | null
+  contado_por: string | null
+  contado_em: string | null
+}
+
+export interface EstoqueCicloItemComItem extends EstoqueCicloItem {
+  item: EstoqueItem
 }
 
 export interface EstoqueEquipeStatus {

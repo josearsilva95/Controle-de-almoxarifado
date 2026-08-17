@@ -6,6 +6,7 @@ import { useAuth } from '../auth/useAuth'
 import { iniciaisDoNome, rotuloRole } from '../lib/cores'
 import { podeAdministrar } from '../lib/permissoes'
 import { AlertasEmpilhadeira } from './AlertasEmpilhadeira'
+import { AlertaContagemCiclica } from './AlertaContagemCiclica'
 import { classesBotao, classesBotaoIcone } from './ui/Botao'
 import type { Profile } from '../types/database'
 
@@ -57,6 +58,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-svh flex-col bg-background md:flex-row">
       {administra && <AlertasEmpilhadeira />}
+      {profile.recebe_alerta_ciclo && <AlertaContagemCiclica />}
 
       {/* Navegação lateral — só em telas médias/grandes; no celular vira a barra inferior. */}
       <aside

@@ -21,6 +21,9 @@ create table public.profiles (
   -- Equipe do inventário de estoque (nula = não participa). equipe_1/equipe_2
   -- contam de forma independente; equipe_3 resolve as divergências entre elas.
   equipe_estoque text check (equipe_estoque in ('equipe_1', 'equipe_2', 'equipe_3')),
+  -- Recebe o alerta flutuante quando a contagem cíclica diária do estoque é
+  -- concluída, com o botão pra baixar o PDF do resultado (ver estoque_ciclos).
+  recebe_alerta_ciclo boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -422,6 +425,131 @@ create policy estoque_equipes_status_delete_admin
   using (public.is_admin());
 
 -- ============================================================
+-- estoque_ciclos / estoque_ciclos_itens: contagem cíclica diária — todo dia
+-- que alguém com acesso ao Estoque abrir o app, o sistema sorteia 10 itens
+-- pra conferência rápida (separado do inventário geral em 3 equipes).
+-- data_referencia garante um ciclo por dia mesmo com duas pessoas abrindo
+-- ao mesmo tempo (ver gerar_ciclo_hoje() abaixo).
+-- ============================================================
+
+create table public.estoque_ciclos (
+  id uuid primary key default gen_random_uuid(),
+  data_referencia date not null unique,
+  gerado_em timestamptz not null default now(),
+  finalizado_em timestamptz,
+  visto_por uuid references public.profiles (id),
+  visto_em timestamptz
+);
+
+create table public.estoque_ciclos_itens (
+  id uuid primary key default gen_random_uuid(),
+  ciclo_id uuid not null references public.estoque_ciclos (id) on delete cascade,
+  item_id uuid not null references public.estoque_itens (id) on delete cascade,
+  quantidade_contada integer,
+  local text,
+  contado_por uuid references public.profiles (id),
+  contado_em timestamptz,
+  unique (ciclo_id, item_id)
+);
+
+alter table public.estoque_ciclos enable row level security;
+alter table public.estoque_ciclos_itens enable row level security;
+
+create policy estoque_ciclos_select_admin_ou_equipe
+  on public.estoque_ciclos for select
+  to authenticated
+  using (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  );
+
+create policy estoque_ciclos_update_admin_ou_equipe
+  on public.estoque_ciclos for update
+  to authenticated
+  using (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  )
+  with check (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  );
+
+create policy estoque_ciclos_itens_select_admin_ou_equipe
+  on public.estoque_ciclos_itens for select
+  to authenticated
+  using (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  );
+
+create policy estoque_ciclos_itens_update_admin_ou_equipe
+  on public.estoque_ciclos_itens for update
+  to authenticated
+  using (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  )
+  with check (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  );
+
+-- Sorteia os 10 itens do dia, priorizando quem nunca foi conferido ou foi
+-- conferido há mais tempo (não é 100% aleatório de propósito — puro random
+-- deixaria alguns itens sem nunca serem checados enquanto outros repetem
+-- por sorte). security definer porque insere em duas tabelas sem RLS de
+-- insert pro cliente (só admin/quem tem equipe_estoque pode chamar).
+create function public.gerar_ciclo_hoje()
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ciclo_existente uuid;
+  novo_ciclo_id uuid;
+begin
+  if not (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  ) then
+    raise exception 'Apenas quem tem acesso ao Estoque pode gerar o ciclo do dia.';
+  end if;
+
+  select id into ciclo_existente from public.estoque_ciclos where data_referencia = current_date;
+  if ciclo_existente is not null then
+    return ciclo_existente;
+  end if;
+
+  insert into public.estoque_ciclos (data_referencia)
+  values (current_date)
+  on conflict (data_referencia) do nothing
+  returning id into novo_ciclo_id;
+
+  -- Outra sessão criou ao mesmo tempo (race) — usa o ciclo dela.
+  if novo_ciclo_id is null then
+    select id into novo_ciclo_id from public.estoque_ciclos where data_referencia = current_date;
+    return novo_ciclo_id;
+  end if;
+
+  insert into public.estoque_ciclos_itens (ciclo_id, item_id)
+  select novo_ciclo_id, ei.id
+  from public.estoque_itens ei
+  order by (
+    select max(eci.contado_em)
+    from public.estoque_ciclos_itens eci
+    where eci.item_id = ei.id
+  ) asc nulls first, random()
+  limit 10;
+
+  return novo_ciclo_id;
+end;
+$$;
+
+grant execute on function public.gerar_ciclo_hoje() to authenticated;
+
+-- ============================================================
 -- Realtime — habilita replicação para as tabelas usadas nos hooks
 -- ============================================================
 
@@ -430,6 +558,8 @@ alter publication supabase_realtime add table public.pedido_sessoes;
 alter publication supabase_realtime add table public.estoque_contagens;
 alter publication supabase_realtime add table public.estoque_equipes_status;
 alter publication supabase_realtime add table public.estoque_locais;
+alter publication supabase_realtime add table public.estoque_ciclos;
+alter publication supabase_realtime add table public.estoque_ciclos_itens;
 
 -- ============================================================
 -- Após rodar este schema:
