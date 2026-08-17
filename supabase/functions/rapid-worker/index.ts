@@ -47,11 +47,25 @@ Deno.serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    // Mesmo problema já visto com a service_role key: em alguns ambientes a variável
+    // automática SUPABASE_ANON_KEY não fica disponível para funções publicadas pelo
+    // editor do painel — ANON_KEY é um secret manual de fallback (Edge Functions →
+    // Secrets) com o mesmo valor (Project Settings → API → anon public).
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('ANON_KEY') || ''
     // Em alguns ambientes a variável automática SUPABASE_SERVICE_ROLE_KEY não fica
     // disponível para funções publicadas pelo editor do painel — SERVICE_ROLE_KEY é
     // um secret manual de fallback (Edge Functions → Secrets) com o mesmo valor.
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY') || ''
+
+    if (!anonKey) {
+      return jsonResponse(
+        {
+          erro:
+            'Configuração incompleta no servidor: falta a chave anônima. Adicione o secret ANON_KEY em Edge Functions → Secrets (valor: Project Settings → API → anon public).',
+        },
+        500
+      )
+    }
 
     // Cliente autenticado como quem chamou, só para descobrir quem é e checar o papel.
     const clienteChamador = createClient(supabaseUrl, anonKey, {
@@ -60,7 +74,11 @@ Deno.serve(async (req) => {
 
     const { data: userData, error: userError } = await clienteChamador.auth.getUser()
     if (userError || !userData.user) {
-      return jsonResponse({ erro: 'Sessão inválida.' }, 401)
+      console.error('Erro ao validar sessão do chamador:', JSON.stringify(userError))
+      return jsonResponse(
+        { erro: `Sessão inválida: ${mensagemDeErro(userError, 'faça login novamente e tente de novo')}.` },
+        401
+      )
     }
 
     const { data: perfilChamador, error: perfilError } = await clienteChamador
