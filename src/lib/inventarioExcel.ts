@@ -39,5 +39,53 @@ export function gerarExcelInventario(itens: EstoqueItem[], contagens: EstoqueCon
 
   const livro = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(livro, planilha, 'Inventário')
-  XLSX.writeFile(livro, `inventario-${new Date().toISOString().slice(0, 10)}.xlsx`)
+  XLSX.writeFile(livro, `inventario-geral-${new Date().toISOString().slice(0, 10)}.xlsx`)
+}
+
+// Só o que uma equipe (1 ou 2) contou — não mostra a outra equipe.
+export function gerarExcelInventarioEquipe(itens: EstoqueItem[], contagens: EstoqueContagem[], equipe: 'equipe_1' | 'equipe_2') {
+  const numero = equipe === 'equipe_1' ? '1' : '2'
+  const linhas = compararContagens(itens, contagens).filter((l) =>
+    equipe === 'equipe_1' ? l.equipe1 != null : l.equipe2 != null
+  )
+
+  const dados = linhas.map((l) => ({
+    Código: l.item.codigo,
+    Descrição: l.item.descricao,
+    Categoria: l.item.categoria ?? '',
+    Depósito: rotuloDeposito(l.item.deposito),
+    'Lote(s)': l.item.lotes ?? '',
+    'Qtd. Sistema': l.sistema ?? '',
+    [`Qtd. Equipe ${numero}`]: equipe === 'equipe_1' ? l.equipe1 : l.equipe2,
+  }))
+
+  const planilha = XLSX.utils.json_to_sheet(dados)
+  planilha['!cols'] = [{ wch: 14 }, { wch: 45 }, { wch: 20 }, { wch: 12 }, { wch: 24 }, { wch: 12 }, { wch: 14 }]
+
+  const livro = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(livro, planilha, `Equipe ${numero}`)
+  XLSX.writeFile(livro, `inventario-equipe-${numero}-${new Date().toISOString().slice(0, 10)}.xlsx`)
+}
+
+// Só as divergências (equipe 1 x equipe 2), pra equipe 3 trabalhar em cima.
+export function gerarExcelDivergencias(itens: EstoqueItem[], contagens: EstoqueContagem[]) {
+  const linhas = compararContagens(itens, contagens).filter((l) => l.divergeEntreEquipes)
+
+  const dados = linhas.map((l) => ({
+    Código: l.item.codigo,
+    Descrição: l.item.descricao,
+    Categoria: l.item.categoria ?? '',
+    Depósito: rotuloDeposito(l.item.deposito),
+    'Lote(s)': l.item.lotes ?? '',
+    'Equipe 1': l.equipe1,
+    'Equipe 2': l.equipe2,
+    'Equipe 3 (final)': l.equipe3 ?? '',
+  }))
+
+  const planilha = XLSX.utils.json_to_sheet(dados)
+  planilha['!cols'] = [{ wch: 14 }, { wch: 45 }, { wch: 20 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 15 }]
+
+  const livro = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(livro, planilha, 'Divergências')
+  XLSX.writeFile(livro, `inventario-divergencias-${new Date().toISOString().slice(0, 10)}.xlsx`)
 }

@@ -19,13 +19,21 @@ import { rotuloDeposito } from '../lib/depositos'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
 import { podeAdministrar } from '../lib/permissoes'
 import { gerarPdfEstoque } from '../lib/estoquePdf'
-import { gerarPdfInventario } from '../lib/inventarioPdf'
-import { gerarExcelInventario } from '../lib/inventarioExcel'
+import { gerarPdfInventario, gerarPdfInventarioEquipe, gerarPdfDivergencias } from '../lib/inventarioPdf'
+import { gerarExcelInventario, gerarExcelInventarioEquipe, gerarExcelDivergencias } from '../lib/inventarioExcel'
 import type { EstoqueItem } from '../types/database'
 
 const ITENS_POR_PAGINA = 50
 const SEM_CATEGORIA = 'Sem categoria'
 type Modo = 'catalogo' | 'equipes' | 'inventario'
+type EscopoRelatorio = 'geral' | 'equipe_1' | 'equipe_2' | 'divergencias'
+
+const OPCOES_ESCOPO_RELATORIO: { valor: EscopoRelatorio; rotulo: string }[] = [
+  { valor: 'geral', rotulo: 'Geral (todas as equipes)' },
+  { valor: 'equipe_1', rotulo: 'Só Equipe 1' },
+  { valor: 'equipe_2', rotulo: 'Só Equipe 2' },
+  { valor: 'divergencias', rotulo: 'Só divergências (Equipe 3)' },
+]
 
 export function AdminEstoque() {
   const { profile } = useAuth()
@@ -34,6 +42,7 @@ export function AdminEstoque() {
   const { status: statusEquipes, recarregar: recarregarStatus } = useEstoqueEquipesStatus()
   const { perfis, recarregar: recarregarPerfis } = usePerfis()
   const [modo, setModo] = useState<Modo>('catalogo')
+  const [escopoRelatorio, setEscopoRelatorio] = useState<EscopoRelatorio>('geral')
   const [busca, setBusca] = useState('')
   const [categoriaAtiva, setCategoriaAtiva] = useState('todas')
   const [pagina, setPagina] = useState(1)
@@ -87,11 +96,23 @@ export function AdminEstoque() {
   }
 
   function baixarPdfInventario() {
-    gerarPdfInventario(itens, contagens)
+    if (escopoRelatorio === 'equipe_1' || escopoRelatorio === 'equipe_2') {
+      gerarPdfInventarioEquipe(itens, contagens, escopoRelatorio)
+    } else if (escopoRelatorio === 'divergencias') {
+      gerarPdfDivergencias(itens, contagens)
+    } else {
+      gerarPdfInventario(itens, contagens)
+    }
   }
 
   function baixarExcelInventario() {
-    gerarExcelInventario(itens, contagens)
+    if (escopoRelatorio === 'equipe_1' || escopoRelatorio === 'equipe_2') {
+      gerarExcelInventarioEquipe(itens, contagens, escopoRelatorio)
+    } else if (escopoRelatorio === 'divergencias') {
+      gerarExcelDivergencias(itens, contagens)
+    } else {
+      gerarExcelInventario(itens, contagens)
+    }
   }
 
   if (!profile) return null
@@ -152,6 +173,18 @@ export function AdminEstoque() {
           )}
           {modo === 'inventario' && (
             <>
+              <select
+                className="rounded-md border border-input bg-card px-2.5 py-1.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                value={escopoRelatorio}
+                onChange={(e) => setEscopoRelatorio(e.target.value as EscopoRelatorio)}
+                aria-label="Escopo do relatório"
+              >
+                {OPCOES_ESCOPO_RELATORIO.map((opcao) => (
+                  <option key={opcao.valor} value={opcao.valor}>
+                    {opcao.rotulo}
+                  </option>
+                ))}
+              </select>
               <Botao variante="secundaria" tamanho="sm" onClick={baixarExcelInventario} disabled={itens.length === 0}>
                 <Download className="h-4 w-4" />
                 Baixar Excel
@@ -195,7 +228,12 @@ export function AdminEstoque() {
 
       {modo === 'inventario' && (
         <>
-          <InventarioProgresso itens={itens} contagens={contagens} />
+          <InventarioProgresso
+            itens={itens}
+            contagens={contagens}
+            statusEquipes={statusEquipes}
+            onStatusMudou={recarregarStatus}
+          />
           <InventarioContagensRecentes itens={itens} contagens={contagens} perfis={perfis} />
           <InventarioDivergencias
             itens={itens}

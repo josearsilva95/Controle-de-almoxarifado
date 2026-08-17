@@ -28,15 +28,18 @@ function ListaAlerta({
       {itens.length === 0 ? (
         <p className="py-4 text-sm text-muted-foreground">Nenhum caso no momento.</p>
       ) : (
-        <ul className="mt-4 max-h-72 divide-y divide-border overflow-y-auto text-sm">
+        <ul className="mt-4 max-h-72 space-y-2 overflow-y-auto text-sm">
           {itens.map((item) => (
-            <li key={item.codigo} className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <li
+              key={item.codigo}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-destructive/10 px-2.5 py-2"
+            >
               <div className="min-w-0">
-                <span className="font-medium text-card-foreground">{item.codigo}</span>{' '}
-                <span className="truncate text-muted-foreground">{item.descricao}</span>
-                {item.lote && <div className="text-xs text-muted-foreground">Lote(s): {item.lote}</div>}
+                <span className="font-medium text-destructive">{item.codigo}</span>{' '}
+                <span className="truncate text-destructive/80">{item.descricao}</span>
+                {item.lote && <div className="text-xs text-destructive/70">Lote(s): {item.lote}</div>}
               </div>
-              <span className="shrink-0 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-semibold text-destructive">
+              <span className="shrink-0 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground">
                 {item.texto}
               </span>
             </li>
