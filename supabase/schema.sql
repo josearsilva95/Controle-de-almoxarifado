@@ -261,19 +261,23 @@ create policy estoque_itens_delete_admin
 
 -- ============================================================
 -- estoque_contagens: contagem física do inventário, uma linha por
--- (item, equipe) — equipe_1 e equipe_2 contam de forma independente;
--- equipe_3 grava a contagem final nos itens em que elas divergem. Contar
--- de novo pela mesma equipe atualiza a própria linha em vez de duplicar.
+-- (item, equipe, lote) — equipe_1 e equipe_2 contam de forma independente;
+-- equipe_3 grava a contagem final nos lotes em que elas divergem. Contar
+-- de novo pela mesma equipe/lote atualiza a própria linha em vez de duplicar.
 -- ============================================================
 
 create table public.estoque_contagens (
   id uuid primary key default gen_random_uuid(),
   item_id uuid not null references public.estoque_itens (id) on delete cascade,
   equipe text not null check (equipe in ('equipe_1', 'equipe_2', 'equipe_3')),
+  -- '' quando o item não tem lote cadastrado ou só tem um (sem ambiguidade
+  -- pra escolher) — só vira um valor de fato quando o item tem 2+ lotes e
+  -- quem contou escolheu qual estava contando (ver src/lib/lotesItem.ts).
+  lote text not null default '',
   quantidade integer not null,
   contado_por uuid not null references public.profiles (id),
   contado_em timestamptz not null default now(),
-  unique (item_id, equipe)
+  unique (item_id, equipe, lote)
 );
 
 create index estoque_contagens_item_id_idx on public.estoque_contagens (item_id);

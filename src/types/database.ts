@@ -61,6 +61,8 @@ export interface EstoqueContagem {
   id: string
   item_id: string
   equipe: EquipeEstoque
+  // '' quando o item não tem lote múltiplo — ver src/lib/lotesItem.ts
+  lote: string
   quantidade: number
   contado_por: string
   contado_em: string

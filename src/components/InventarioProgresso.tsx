@@ -3,6 +3,7 @@ import { Lock, LockOpen } from 'lucide-react'
 import { Cartao } from './ui/Cartao'
 import { Botao } from './ui/Botao'
 import { reabrirContagemEquipe } from '../lib/acoesEstoque'
+import { lotesDoItem } from '../lib/lotesItem'
 import { rotuloEquipe } from '../lib/equipes'
 import { formatDataHora } from '../lib/tempo'
 import type { EquipeEstoque, EstoqueContagem, EstoqueEquipeStatus, EstoqueItem } from '../types/database'
@@ -75,32 +76,37 @@ function LinhaStatusEquipe({
 
 export function InventarioProgresso({ itens, contagens, statusEquipes, onStatusMudou }: InventarioProgressoProps) {
   const stats = useMemo(() => {
-    const porItem = new Map<string, Partial<Record<EquipeEstoque, number>>>()
+    const porSlot = new Map<string, Partial<Record<EquipeEstoque, number>>>()
     for (const c of contagens) {
-      const atual = porItem.get(c.item_id) ?? {}
+      const chave = `${c.item_id}::${c.lote}`
+      const atual = porSlot.get(chave) ?? {}
       atual[c.equipe] = c.quantidade
-      porItem.set(c.item_id, atual)
+      porSlot.set(chave, atual)
     }
+    let total = 0
     let equipe1 = 0
     let equipe2 = 0
     let divergentes = 0
     let resolvidas = 0
     for (const item of itens) {
-      const c = porItem.get(item.id) ?? {}
-      if (c.equipe_1 != null) equipe1++
-      if (c.equipe_2 != null) equipe2++
-      if (c.equipe_1 != null && c.equipe_2 != null && c.equipe_1 !== c.equipe_2) {
-        divergentes++
-        if (c.equipe_3 != null) resolvidas++
+      for (const lote of lotesDoItem(item)) {
+        total++
+        const c = porSlot.get(`${item.id}::${lote}`) ?? {}
+        if (c.equipe_1 != null) equipe1++
+        if (c.equipe_2 != null) equipe2++
+        if (c.equipe_1 != null && c.equipe_2 != null && c.equipe_1 !== c.equipe_2) {
+          divergentes++
+          if (c.equipe_3 != null) resolvidas++
+        }
       }
     }
-    return { total: itens.length, equipe1, equipe2, divergentes, resolvidas }
+    return { total, equipe1, equipe2, divergentes, resolvidas }
   }, [itens, contagens])
 
   return (
     <div className="mb-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <Estatistica label="Total de itens" valor={stats.total} />
+        <Estatistica label="Total de itens/lotes" valor={stats.total} />
         <Estatistica label="Equipe 1 contou" valor={stats.equipe1} deTotal={stats.total} />
         <Estatistica label="Equipe 2 contou" valor={stats.equipe2} deTotal={stats.total} />
         <Estatistica label="Divergências" valor={stats.divergentes} />

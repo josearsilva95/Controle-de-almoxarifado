@@ -1,10 +1,12 @@
 import * as XLSX from 'xlsx'
-import { compararContagens } from './inventarioComparacao'
+import { compararContagens, compararTotaisPorItem } from './inventarioComparacao'
 import { rotuloDeposito } from './depositos'
 import type { EstoqueContagem, EstoqueItem } from '../types/database'
 
+// Relatório geral, um item por linha — soma dos lotes de cada equipe
+// comparada com a quantidade oficial do sistema.
 export function gerarExcelInventario(itens: EstoqueItem[], contagens: EstoqueContagem[]) {
-  const linhas = compararContagens(itens, contagens)
+  const linhas = compararTotaisPorItem(itens, contagens)
 
   const dados = linhas.map((l) => ({
     Código: l.item.codigo,
@@ -13,12 +15,10 @@ export function gerarExcelInventario(itens: EstoqueItem[], contagens: EstoqueCon
     Depósito: rotuloDeposito(l.item.deposito),
     'Lote(s)': l.item.lotes ?? '',
     'Qtd. Sistema': l.sistema ?? '',
-    'Equipe 1': l.equipe1 ?? '',
-    'Equipe 2': l.equipe2 ?? '',
-    'Equipe 3 (final)': l.equipe3 ?? '',
+    'Equipe 1 (total)': l.equipe1Total ?? '',
+    'Equipe 2 (total)': l.equipe2Total ?? '',
     'Diverge Sistema x Equipe 1': l.divergeSistemaEquipe1 ? 'Sim' : 'Não',
     'Diverge Sistema x Equipe 2': l.divergeSistemaEquipe2 ? 'Sim' : 'Não',
-    'Diverge Equipe 1 x Equipe 2': l.divergeEntreEquipes ? 'Sim' : 'Não',
   }))
 
   const planilha = XLSX.utils.json_to_sheet(dados)
@@ -29,10 +29,8 @@ export function gerarExcelInventario(itens: EstoqueItem[], contagens: EstoqueCon
     { wch: 12 },
     { wch: 24 },
     { wch: 12 },
-    { wch: 10 },
-    { wch: 10 },
     { wch: 15 },
-    { wch: 22 },
+    { wch: 15 },
     { wch: 22 },
     { wch: 22 },
   ]
@@ -42,7 +40,8 @@ export function gerarExcelInventario(itens: EstoqueItem[], contagens: EstoqueCon
   XLSX.writeFile(livro, `inventario-geral-${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
 
-// Só o que uma equipe (1 ou 2) contou — não mostra a outra equipe.
+// Só o que uma equipe (1 ou 2) contou — um lote por linha, não mostra a
+// outra equipe.
 export function gerarExcelInventarioEquipe(itens: EstoqueItem[], contagens: EstoqueContagem[], equipe: 'equipe_1' | 'equipe_2') {
   const numero = equipe === 'equipe_1' ? '1' : '2'
   const linhas = compararContagens(itens, contagens).filter((l) =>
@@ -54,8 +53,8 @@ export function gerarExcelInventarioEquipe(itens: EstoqueItem[], contagens: Esto
     Descrição: l.item.descricao,
     Categoria: l.item.categoria ?? '',
     Depósito: rotuloDeposito(l.item.deposito),
-    'Lote(s)': l.item.lotes ?? '',
-    'Qtd. Sistema': l.sistema ?? '',
+    Lote: l.temLote ? l.lote : '',
+    'Qtd. Sistema': l.item.quantidade ?? '',
     [`Qtd. Equipe ${numero}`]: equipe === 'equipe_1' ? l.equipe1 : l.equipe2,
   }))
 
@@ -67,8 +66,9 @@ export function gerarExcelInventarioEquipe(itens: EstoqueItem[], contagens: Esto
   XLSX.writeFile(livro, `inventario-equipe-${numero}-${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
 
-// Só as divergências (equipe 1 x equipe 2), pra equipe 3 trabalhar em cima
-// — inclui o saldo real do sistema, pra dar contexto na hora de resolver.
+// Só as divergências (equipe 1 x equipe 2), um lote por linha — pra equipe
+// 3 trabalhar em cima. Inclui o saldo real do sistema, pra dar contexto na
+// hora de resolver.
 export function gerarExcelDivergencias(itens: EstoqueItem[], contagens: EstoqueContagem[]) {
   const linhas = compararContagens(itens, contagens).filter((l) => l.divergeEntreEquipes)
 
@@ -77,8 +77,8 @@ export function gerarExcelDivergencias(itens: EstoqueItem[], contagens: EstoqueC
     Descrição: l.item.descricao,
     Categoria: l.item.categoria ?? '',
     Depósito: rotuloDeposito(l.item.deposito),
-    'Lote(s)': l.item.lotes ?? '',
-    'Qtd. Sistema': l.sistema ?? '',
+    Lote: l.temLote ? l.lote : '',
+    'Qtd. Sistema': l.item.quantidade ?? '',
     'Equipe 1': l.equipe1,
     'Equipe 2': l.equipe2,
     'Equipe 3 (final)': l.equipe3 ?? '',

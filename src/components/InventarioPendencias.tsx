@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Cartao } from './ui/Cartao'
+import { lotesDoItem } from '../lib/lotesItem'
 import type { EquipeEstoque, EstoqueContagem, EstoqueEquipeStatus, EstoqueItem } from '../types/database'
 
 interface InventarioPendenciasProps {
@@ -35,18 +36,20 @@ export function InventarioPendencias({ itens, contagens, statusEquipes }: Invent
   const equipe2Finalizada = statusEquipes.some((s) => s.equipe === 'equipe_2' && s.finalizada_em)
 
   const { faltandoEquipe1, faltandoEquipe2 } = useMemo(() => {
-    const porItem = new Map<string, Partial<Record<EquipeEstoque, number>>>()
-    for (const c of contagens) {
-      const atual = porItem.get(c.item_id) ?? {}
-      atual[c.equipe] = c.quantidade
-      porItem.set(c.item_id, atual)
+    const contadosPorSlot = new Set<string>()
+    for (const c of contagens) contadosPorSlot.add(`${c.item_id}::${c.equipe}::${c.lote}`)
+
+    function completou(item: EstoqueItem, equipe: EquipeEstoque): boolean {
+      return lotesDoItem(item).every((lote) => contadosPorSlot.has(`${item.id}::${equipe}::${lote}`))
     }
+
     const faltandoEquipe1: EstoqueItem[] = []
     const faltandoEquipe2: EstoqueItem[] = []
     for (const item of itens) {
-      const c = porItem.get(item.id) ?? {}
-      if (c.equipe_2 != null && c.equipe_1 == null) faltandoEquipe1.push(item)
-      if (c.equipe_1 != null && c.equipe_2 == null) faltandoEquipe2.push(item)
+      const c1 = completou(item, 'equipe_1')
+      const c2 = completou(item, 'equipe_2')
+      if (c2 && !c1) faltandoEquipe1.push(item)
+      if (c1 && !c2) faltandoEquipe2.push(item)
     }
     return { faltandoEquipe1, faltandoEquipe2 }
   }, [itens, contagens])

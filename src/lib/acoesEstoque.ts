@@ -5,19 +5,21 @@ interface ResultadoAcao {
   erro: string | null
 }
 
-// Grava a contagem da equipe pra um item — uma linha por (item, equipe);
-// contar de novo pela mesma equipe atualiza a própria linha em vez de
-// duplicar. Não mexe em estoque_itens.quantidade — esse campo é a
-// quantidade oficial do sistema (importada), fica intacto pra comparação.
+// Grava a contagem da equipe pra um item/lote — uma linha por (item, equipe,
+// lote); contar de novo pela mesma equipe/lote atualiza a própria linha em
+// vez de duplicar. lote é '' quando o item não tem lote múltiplo (ver
+// src/lib/lotesItem.ts). Não mexe em estoque_itens.quantidade — esse campo
+// é a quantidade oficial do sistema (importada), fica intacto pra comparação.
 export async function registrarContagem(
   itemId: string,
   equipe: EquipeEstoque,
+  lote: string,
   quantidade: number,
   usuarioId: string
 ): Promise<ResultadoAcao> {
   const { error } = await supabase.from('estoque_contagens').upsert(
-    { item_id: itemId, equipe, quantidade, contado_por: usuarioId, contado_em: new Date().toISOString() },
-    { onConflict: 'item_id,equipe' }
+    { item_id: itemId, equipe, lote, quantidade, contado_por: usuarioId, contado_em: new Date().toISOString() },
+    { onConflict: 'item_id,equipe,lote' }
   )
   if (error) return { erro: error.message }
   return { erro: null }

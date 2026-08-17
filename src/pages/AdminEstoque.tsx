@@ -22,7 +22,7 @@ import { podeAdministrar } from '../lib/permissoes'
 import { gerarPdfEstoque } from '../lib/estoquePdf'
 import { gerarPdfInventario, gerarPdfInventarioEquipe, gerarPdfDivergencias } from '../lib/inventarioPdf'
 import { gerarExcelInventario, gerarExcelInventarioEquipe, gerarExcelDivergencias } from '../lib/inventarioExcel'
-import { compararContagens } from '../lib/inventarioComparacao'
+import { compararContagens, compararTotaisPorItem } from '../lib/inventarioComparacao'
 import { reiniciarInventario } from '../lib/acoesEstoque'
 import type { EstoqueItem } from '../types/database'
 
@@ -53,7 +53,8 @@ export function AdminEstoque() {
   const [criando, setCriando] = useState(false)
   const [reiniciando, setReiniciando] = useState(false)
 
-  const comparacaoInventario = useMemo(() => compararContagens(itens, contagens), [itens, contagens])
+  const comparacaoPorItem = useMemo(() => compararTotaisPorItem(itens, contagens), [itens, contagens])
+  const comparacaoPorLote = useMemo(() => compararContagens(itens, contagens), [itens, contagens])
 
   const categorias = useMemo(() => {
     const contagem = new Map<string, number>()
@@ -273,7 +274,7 @@ export function AdminEstoque() {
             onContado={recarregarContagens}
           />
           <InventarioPendencias itens={itens} contagens={contagens} statusEquipes={statusEquipes} />
-          <RelatorioInventarioAlertas linhas={comparacaoInventario} />
+          <RelatorioInventarioAlertas linhasItem={comparacaoPorItem} linhasLote={comparacaoPorLote} />
         </>
       )}
 

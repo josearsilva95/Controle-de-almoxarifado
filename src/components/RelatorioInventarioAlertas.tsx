@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { Cartao } from './ui/Cartao'
-import type { LinhaComparacao } from '../lib/inventarioComparacao'
+import type { LinhaItem, LinhaLote } from '../lib/inventarioComparacao'
 
 interface RelatorioInventarioAlertasProps {
-  linhas: LinhaComparacao[]
+  linhasItem: LinhaItem[]
+  linhasLote: LinhaLote[]
 }
 
 function ListaAlerta({
@@ -31,7 +32,7 @@ function ListaAlerta({
         <ul className="mt-4 max-h-72 space-y-2 overflow-y-auto text-sm">
           {itens.map((item) => (
             <li
-              key={item.codigo}
+              key={`${item.codigo}::${item.lote ?? ''}`}
               className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-destructive/10 px-2.5 py-2"
             >
               <div className="min-w-0">
@@ -53,44 +54,46 @@ function ListaAlerta({
 // Três alertas de inventário, lado a lado com o resto de Relatórios: cada
 // equipe contra o sistema, e as duas equipes entre si. Reaproveita
 // compararContagens (mesma lógica do Excel/PDF do inventário).
-export function RelatorioInventarioAlertas({ linhas }: RelatorioInventarioAlertasProps) {
+export function RelatorioInventarioAlertas({ linhasItem, linhasLote }: RelatorioInventarioAlertasProps) {
   const alertasSistemaEquipe1 = useMemo(
     () =>
-      linhas
+      linhasItem
         .filter((l) => l.divergeSistemaEquipe1)
         .map((l) => ({
           codigo: l.item.codigo,
           descricao: l.item.descricao,
           lote: l.item.lotes,
-          texto: `sistema ${l.sistema} · equipe 1 contou ${l.equipe1}`,
+          texto: `sistema ${l.sistema} · equipe 1 contou ${l.equipe1Total}`,
         })),
-    [linhas]
+    [linhasItem]
   )
 
   const alertasSistemaEquipe2 = useMemo(
     () =>
-      linhas
+      linhasItem
         .filter((l) => l.divergeSistemaEquipe2)
         .map((l) => ({
           codigo: l.item.codigo,
           descricao: l.item.descricao,
           lote: l.item.lotes,
-          texto: `sistema ${l.sistema} · equipe 2 contou ${l.equipe2}`,
+          texto: `sistema ${l.sistema} · equipe 2 contou ${l.equipe2Total}`,
         })),
-    [linhas]
+    [linhasItem]
   )
 
+  // Cada linha aqui é um lote específico (quando o item tem mais de um) —
+  // um mesmo item pode aparecer mais de uma vez, um por lote divergente.
   const alertasEntreEquipes = useMemo(
     () =>
-      linhas
+      linhasLote
         .filter((l) => l.divergeEntreEquipes)
         .map((l) => ({
           codigo: l.item.codigo,
           descricao: l.item.descricao,
-          lote: l.item.lotes,
+          lote: l.temLote ? l.lote : null,
           texto: `equipe 1: ${l.equipe1} · equipe 2: ${l.equipe2}`,
         })),
-    [linhas]
+    [linhasLote]
   )
 
   return (

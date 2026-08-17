@@ -3,6 +3,7 @@ import { AlertTriangle, Check, Lock } from 'lucide-react'
 import { classesBotaoIcone } from './ui/Botao'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
 import { registrarContagem } from '../lib/acoesEstoque'
+import { compararContagens } from '../lib/inventarioComparacao'
 import type { EstoqueContagem, EstoqueItem } from '../types/database'
 
 interface InventarioDivergenciasProps {
@@ -14,6 +15,8 @@ interface InventarioDivergenciasProps {
 
 interface Divergencia {
   item: EstoqueItem
+  lote: string
+  temLote: boolean
   qtdEquipe1: number
   qtdEquipe2: number
   qtdEquipe3: number | null
@@ -41,7 +44,13 @@ function LinhaDivergencia({
     }
     setSalvando(true)
     setErro(null)
-    const { erro: erroAcao } = await registrarContagem(divergencia.item.id, 'equipe_3', numero, usuarioId)
+    const { erro: erroAcao } = await registrarContagem(
+      divergencia.item.id,
+      'equipe_3',
+      divergencia.lote,
+      numero,
+      usuarioId
+    )
     setSalvando(false)
     if (erroAcao) {
       setErro(erroAcao)
@@ -54,6 +63,7 @@ function LinhaDivergencia({
     <tr className={`border-t border-border ${resolvida ? '' : 'bg-destructive/5'}`}>
       <td className="px-3 py-2.5 font-medium text-card-foreground">{divergencia.item.codigo}</td>
       <td className="px-3 py-2.5 text-card-foreground">{divergencia.item.descricao}</td>
+      <td className="px-3 py-2.5 text-muted-foreground">{divergencia.temLote ? divergencia.lote : '—'}</td>
       <td className="px-3 py-2.5 text-muted-foreground">{divergencia.qtdEquipe1}</td>
       <td className="px-3 py-2.5 text-muted-foreground">{divergencia.qtdEquipe2}</td>
       <td className="px-3 py-2.5">
@@ -97,21 +107,19 @@ export function InventarioDivergencias({ itens, contagens, usuarioId, onContado 
   const [busca, setBusca] = useState('')
 
   const divergencias = useMemo(() => {
-    const porItem = new Map<string, { equipe_1?: number; equipe_2?: number; equipe_3?: number }>()
-    for (const c of contagens) {
-      const atual = porItem.get(c.item_id) ?? {}
-      atual[c.equipe] = c.quantidade
-      porItem.set(c.item_id, atual)
-    }
-    const itensPorId = new Map(itens.map((i) => [i.id, i]))
-    const lista: Divergencia[] = []
-    for (const [itemId, c] of porItem) {
-      if (c.equipe_1 == null || c.equipe_2 == null || c.equipe_1 === c.equipe_2) continue
-      const item = itensPorId.get(itemId)
-      if (!item) continue
-      lista.push({ item, qtdEquipe1: c.equipe_1, qtdEquipe2: c.equipe_2, qtdEquipe3: c.equipe_3 ?? null })
-    }
-    return lista.sort((a, b) => a.item.codigo.localeCompare(b.item.codigo))
+    return compararContagens(itens, contagens)
+      .filter((l) => l.divergeEntreEquipes)
+      .map(
+        (l): Divergencia => ({
+          item: l.item,
+          lote: l.lote,
+          temLote: l.temLote,
+          qtdEquipe1: l.equipe1 as number,
+          qtdEquipe2: l.equipe2 as number,
+          qtdEquipe3: l.equipe3,
+        })
+      )
+      .sort((a, b) => a.item.codigo.localeCompare(b.item.codigo) || a.lote.localeCompare(b.lote))
   }, [contagens, itens])
 
   const divergenciasFiltradas = useMemo(() => {
@@ -127,7 +135,7 @@ export function InventarioDivergencias({ itens, contagens, usuarioId, onContado 
     <div>
       <div className="mb-4 flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-sm text-secondary-foreground">
         <AlertTriangle className="h-4 w-4 shrink-0" />
-        {divergencias.length} itens com contagens diferentes entre equipe 1 e equipe 2
+        {divergencias.length} itens/lotes com contagens diferentes entre equipe 1 e equipe 2
         {divergencias.length > 0 && ` · ${pendentes} ainda sem resolução`}
       </div>
 
@@ -152,6 +160,7 @@ export function InventarioDivergencias({ itens, contagens, usuarioId, onContado 
               <tr className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <th className="px-3 py-2.5">Código</th>
                 <th className="px-3 py-2.5">Descrição</th>
+                <th className="px-3 py-2.5">Lote</th>
                 <th className="px-3 py-2.5">Equipe 1</th>
                 <th className="px-3 py-2.5">Equipe 2</th>
                 <th className="px-3 py-2.5">Contagem final</th>
@@ -159,7 +168,12 @@ export function InventarioDivergencias({ itens, contagens, usuarioId, onContado 
             </thead>
             <tbody>
               {divergenciasFiltradas.map((d) => (
-                <LinhaDivergencia key={d.item.id} divergencia={d} usuarioId={usuarioId} onContado={onContado} />
+                <LinhaDivergencia
+                  key={`${d.item.id}::${d.lote}`}
+                  divergencia={d}
+                  usuarioId={usuarioId}
+                  onContado={onContado}
+                />
               ))}
             </tbody>
           </table>
