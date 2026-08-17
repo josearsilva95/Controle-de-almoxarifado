@@ -5,7 +5,7 @@ import { Botao } from './ui/Botao'
 import { Modal } from './ui/Modal'
 import { ScannerCodigoBarras } from './ScannerCodigoBarras'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
-import { finalizarContagemEquipe, reabrirContagemEquipe, registrarContagem } from '../lib/acoesEstoque'
+import { finalizarContagemEquipe, registrarContagem } from '../lib/acoesEstoque'
 import { formatDataHora } from '../lib/tempo'
 import type { EquipeEstoque, EstoqueContagem, EstoqueEquipeStatus, EstoqueItem } from '../types/database'
 
@@ -124,17 +124,6 @@ export function InventarioContagem({
     onStatusMudou()
   }
 
-  async function reabrir() {
-    setMudandoStatus(true)
-    const { erro } = await reabrirContagemEquipe(equipe)
-    setMudandoStatus(false)
-    if (erro) {
-      window.alert(`Não foi possível reabrir: ${erro}`)
-      return
-    }
-    onStatusMudou()
-  }
-
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md bg-secondary px-3 py-2 text-sm text-secondary-foreground">
@@ -143,9 +132,7 @@ export function InventarioContagem({
           {finalizada && statusEquipe?.finalizada_em && ` Finalizada em ${formatDataHora(statusEquipe.finalizada_em)}.`}
         </span>
         {finalizada ? (
-          <Botao variante="secundaria" tamanho="sm" onClick={reabrir} disabled={mudandoStatus}>
-            Reabrir contagem
-          </Botao>
+          <span className="text-xs text-muted-foreground">Só um admin pode reabrir a contagem.</span>
         ) : (
           <Botao variante="secundaria" tamanho="sm" onClick={finalizar} disabled={mudandoStatus}>
             Finalizar contagem
