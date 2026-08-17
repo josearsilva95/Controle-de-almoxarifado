@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Check, Lock, ScanBarcode } from 'lucide-react'
 import { Botao } from './ui/Botao'
-import { Cartao } from './ui/Cartao'
+import { Modal } from './ui/Modal'
 import { ScannerCodigoBarras } from './ScannerCodigoBarras'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
 import { finalizarContagemEquipe, reabrirContagemEquipe, registrarContagem } from '../lib/acoesEstoque'
@@ -153,103 +153,105 @@ export function InventarioContagem({
         )}
       </div>
 
-      {!itemSelecionado ? (
-        <div className="mb-6 sm:max-w-sm">
-          <div className="relative flex items-center gap-2">
-            <input
-              ref={inputBuscaRef}
-              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-              type="text"
-              placeholder="Buscar item pra contar..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              autoFocus
-            />
-            <button
-              type="button"
-              className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
-              onClick={() => {
-                setErroBusca(null)
-                setEscaneando(true)
-              }}
-            >
-              <ScanBarcode className="h-4 w-4" />
-              <span className="hidden sm:inline">Escanear</span>
-            </button>
-            {resultados.length > 0 && (
-              <div className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-md border border-border bg-card shadow-lg">
-                {resultados.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="block w-full border-b border-border px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted"
-                    onClick={() => selecionarItem(item)}
-                  >
-                    <span className="font-medium text-card-foreground">{item.codigo}</span>{' '}
-                    <span className="text-muted-foreground">{item.descricao}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {busca.trim() && resultados.length === 0 && (
-            <p className="mt-2 text-sm text-muted-foreground">Nenhum item encontrado.</p>
-          )}
-          {erroBusca && <p className="mt-2 text-sm text-destructive">{erroBusca}</p>}
-        </div>
-      ) : contagemDoSelecionado ? (
-        <Cartao className="mb-6 sm:max-w-sm">
-          <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Lock className="h-3.5 w-3.5" />
-            Já enviado — não dá mais pra editar
-          </div>
-          <p className="font-semibold text-card-foreground">{itemSelecionado.codigo}</p>
-          <p className="mb-3 text-sm text-muted-foreground">{itemSelecionado.descricao}</p>
-          <p className="mb-4 text-sm text-card-foreground">
-            Quantidade enviada: <span className="font-semibold">{contagemDoSelecionado.quantidade}</span>
-            <br />
-            <span className="text-xs text-muted-foreground">
-              em {formatDataHora(contagemDoSelecionado.contado_em)}
-            </span>
-          </p>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Errou o número? Fala com um admin — só ele pode corrigir uma contagem já enviada.
-          </p>
-          <Botao type="button" variante="secundaria" onClick={cancelarSelecao}>
-            Voltar à busca
-          </Botao>
-        </Cartao>
-      ) : (
-        <Cartao className="mb-6 sm:max-w-sm">
-          <p className="text-xs text-muted-foreground">Contando</p>
-          <p className="font-semibold text-card-foreground">{itemSelecionado.codigo}</p>
-          <p className="mb-3 text-sm text-muted-foreground">{itemSelecionado.descricao}</p>
-          <form onSubmit={confirmar}>
-            <label className="mb-3 flex flex-col gap-1 text-sm font-medium text-card-foreground">
-              Quantidade contada
-              <input
-                ref={inputQuantidadeRef}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-                type="number"
-                min={0}
-                step={1}
-                value={quantidade}
-                onChange={(e) => setQuantidade(e.target.value)}
-                required
-              />
-            </label>
-            {erro && <p className="mb-3 text-sm text-destructive">{erro}</p>}
-            <div className="flex gap-2">
-              <Botao type="button" variante="secundaria" onClick={cancelarSelecao}>
-                Cancelar
-              </Botao>
-              <Botao type="submit" disabled={salvando}>
-                <Check className="h-4 w-4" />
-                {salvando ? 'Salvando...' : 'Confirmar e buscar próximo'}
-              </Botao>
+      <div className="mb-6 sm:max-w-sm">
+        <div className="relative flex items-center gap-2">
+          <input
+            ref={inputBuscaRef}
+            className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+            type="text"
+            placeholder="Buscar item pra contar..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            autoFocus
+          />
+          <button
+            type="button"
+            className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
+            onClick={() => {
+              setErroBusca(null)
+              setEscaneando(true)
+            }}
+          >
+            <ScanBarcode className="h-4 w-4" />
+            <span className="hidden sm:inline">Escanear</span>
+          </button>
+          {resultados.length > 0 && (
+            <div className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-md border border-border bg-card shadow-lg">
+              {resultados.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="block w-full border-b border-border px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted"
+                  onClick={() => selecionarItem(item)}
+                >
+                  <span className="font-medium text-card-foreground">{item.codigo}</span>{' '}
+                  <span className="text-muted-foreground">{item.descricao}</span>
+                </button>
+              ))}
             </div>
-          </form>
-        </Cartao>
+          )}
+        </div>
+        {busca.trim() && resultados.length === 0 && (
+          <p className="mt-2 text-sm text-muted-foreground">Nenhum item encontrado.</p>
+        )}
+        {erroBusca && <p className="mt-2 text-sm text-destructive">{erroBusca}</p>}
+      </div>
+
+      {itemSelecionado && (
+        <Modal titulo={`Contando ${itemSelecionado.codigo}`} onFechar={cancelarSelecao}>
+          {contagemDoSelecionado ? (
+            <>
+              <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Lock className="h-3.5 w-3.5" />
+                Já enviado — não dá mais pra editar
+              </div>
+              <p className="mb-3 text-sm text-muted-foreground">{itemSelecionado.descricao}</p>
+              <p className="mb-4 text-sm text-card-foreground">
+                Quantidade enviada: <span className="font-semibold">{contagemDoSelecionado.quantidade}</span>
+                <br />
+                <span className="text-xs text-muted-foreground">
+                  em {formatDataHora(contagemDoSelecionado.contado_em)}
+                </span>
+              </p>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Errou o número? Fala com um admin — só ele pode corrigir uma contagem já enviada.
+              </p>
+              <Botao type="button" variante="secundaria" onClick={cancelarSelecao}>
+                Voltar à busca
+              </Botao>
+            </>
+          ) : (
+            <>
+              <p className="mb-3 text-sm text-muted-foreground">{itemSelecionado.descricao}</p>
+              <form onSubmit={confirmar}>
+                <label className="mb-3 flex flex-col gap-1 text-sm font-medium text-card-foreground">
+                  Quantidade contada
+                  <input
+                    ref={inputQuantidadeRef}
+                    className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={quantidade}
+                    onChange={(e) => setQuantidade(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </label>
+                {erro && <p className="mb-3 text-sm text-destructive">{erro}</p>}
+                <div className="flex gap-2">
+                  <Botao type="button" variante="secundaria" onClick={cancelarSelecao}>
+                    Cancelar
+                  </Botao>
+                  <Botao type="submit" disabled={salvando}>
+                    <Check className="h-4 w-4" />
+                    {salvando ? 'Salvando...' : 'Confirmar e buscar próximo'}
+                  </Botao>
+                </div>
+              </form>
+            </>
+          )}
+        </Modal>
       )}
 
       <h3 className="mb-2 text-sm font-semibold text-card-foreground">Contagens da sua equipe</h3>
