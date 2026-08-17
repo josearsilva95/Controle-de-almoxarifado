@@ -9,6 +9,7 @@ import { InventarioContagensRecentes } from '../components/InventarioContagensRe
 import { InventarioDivergencias } from '../components/InventarioDivergencias'
 import { InventarioPendencias } from '../components/InventarioPendencias'
 import { InventarioProgresso } from '../components/InventarioProgresso'
+import { RelatorioInventarioAlertas } from '../components/RelatorioInventarioAlertas'
 import { Botao, classesBotaoIcone } from '../components/ui/Botao'
 import { usePerfis } from '../hooks/usePerfis'
 import { useEstoque } from '../hooks/useEstoque'
@@ -21,6 +22,7 @@ import { podeAdministrar } from '../lib/permissoes'
 import { gerarPdfEstoque } from '../lib/estoquePdf'
 import { gerarPdfInventario, gerarPdfInventarioEquipe, gerarPdfDivergencias } from '../lib/inventarioPdf'
 import { gerarExcelInventario, gerarExcelInventarioEquipe, gerarExcelDivergencias } from '../lib/inventarioExcel'
+import { compararContagens } from '../lib/inventarioComparacao'
 import type { EstoqueItem } from '../types/database'
 
 const ITENS_POR_PAGINA = 50
@@ -48,6 +50,8 @@ export function AdminEstoque() {
   const [pagina, setPagina] = useState(1)
   const [itemEditando, setItemEditando] = useState<EstoqueItem | null>(null)
   const [criando, setCriando] = useState(false)
+
+  const comparacaoInventario = useMemo(() => compararContagens(itens, contagens), [itens, contagens])
 
   const categorias = useMemo(() => {
     const contagem = new Map<string, number>()
@@ -242,6 +246,7 @@ export function AdminEstoque() {
             onContado={recarregarContagens}
           />
           <InventarioPendencias itens={itens} contagens={contagens} statusEquipes={statusEquipes} />
+          <RelatorioInventarioAlertas linhas={comparacaoInventario} />
         </>
       )}
 
