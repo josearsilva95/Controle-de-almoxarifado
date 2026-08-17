@@ -34,8 +34,8 @@ export function gerarPdfInventario(itens: EstoqueItem[], contagens: EstoqueConta
       l.equipe3 != null ? String(l.equipe3) : '—',
     ]),
     theme: 'striped',
-    headStyles: { fillColor: [59, 91, 219] },
-    styles: { fontSize: 8 },
+    headStyles: { fillColor: [59, 91, 219], fontSize: 8 },
+    styles: { fontSize: 7, cellPadding: 1.5 },
   })
 
   doc.save(`inventario-${new Date().toISOString().slice(0, 10)}.pdf`)

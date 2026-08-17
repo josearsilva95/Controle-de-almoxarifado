@@ -14,7 +14,7 @@ function ListaAlerta({
 }: {
   titulo: string
   descricao: string
-  itens: { codigo: string; descricao: string; texto: string }[]
+  itens: { codigo: string; descricao: string; lote: string | null; texto: string }[]
 }) {
   return (
     <Cartao>
@@ -34,6 +34,7 @@ function ListaAlerta({
               <div className="min-w-0">
                 <span className="font-medium text-card-foreground">{item.codigo}</span>{' '}
                 <span className="truncate text-muted-foreground">{item.descricao}</span>
+                {item.lote && <div className="text-xs text-muted-foreground">Lote(s): {item.lote}</div>}
               </div>
               <span className="shrink-0 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-semibold text-destructive">
                 {item.texto}
@@ -57,6 +58,7 @@ export function RelatorioInventarioAlertas({ linhas }: RelatorioInventarioAlerta
         .map((l) => ({
           codigo: l.item.codigo,
           descricao: l.item.descricao,
+          lote: l.item.lotes,
           texto: `sistema ${l.sistema} · equipe 1 contou ${l.equipe1}`,
         })),
     [linhas]
@@ -69,6 +71,7 @@ export function RelatorioInventarioAlertas({ linhas }: RelatorioInventarioAlerta
         .map((l) => ({
           codigo: l.item.codigo,
           descricao: l.item.descricao,
+          lote: l.item.lotes,
           texto: `sistema ${l.sistema} · equipe 2 contou ${l.equipe2}`,
         })),
     [linhas]
@@ -81,6 +84,7 @@ export function RelatorioInventarioAlertas({ linhas }: RelatorioInventarioAlerta
         .map((l) => ({
           codigo: l.item.codigo,
           descricao: l.item.descricao,
+          lote: l.item.lotes,
           texto: `equipe 1: ${l.equipe1} · equipe 2: ${l.equipe2}`,
         })),
     [linhas]

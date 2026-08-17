@@ -28,7 +28,8 @@ export function gerarPdfEstoque(itens: EstoqueItem[], rotulo: string) {
       '',
     ]),
     theme: 'striped',
-    headStyles: { fillColor: [59, 91, 219] },
+    headStyles: { fillColor: [59, 91, 219], fontSize: 8 },
+    styles: { fontSize: 7, cellPadding: 1.5 },
     columnStyles: { 6: { cellWidth: 35 } },
   })
 
