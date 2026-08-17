@@ -260,6 +260,46 @@ create policy estoque_itens_delete_admin
   using (public.is_admin());
 
 -- ============================================================
+-- estoque_locais: catálogo de endereços físicos do almoxarifado (ex: "01a"
+-- = unidade 1, nível 1, lado esquerdo). Cadastrado pelo admin; a etiqueta
+-- colada na prateleira usa esse mesmo código como valor do código de
+-- barras — quem conta bipa a etiqueta pra marcar o "local ativo".
+-- ============================================================
+
+create table public.estoque_locais (
+  id uuid primary key default gen_random_uuid(),
+  codigo text not null unique,
+  rotulo text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.estoque_locais enable row level security;
+
+create policy estoque_locais_select_admin_ou_equipe
+  on public.estoque_locais for select
+  to authenticated
+  using (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  );
+
+create policy estoque_locais_insert_admin
+  on public.estoque_locais for insert
+  to authenticated
+  with check (public.is_admin());
+
+create policy estoque_locais_update_admin
+  on public.estoque_locais for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+create policy estoque_locais_delete_admin
+  on public.estoque_locais for delete
+  to authenticated
+  using (public.is_admin());
+
+-- ============================================================
 -- estoque_contagens: contagem física do inventário, uma linha por
 -- (item, equipe, lote) — equipe_1 e equipe_2 contam de forma independente;
 -- equipe_3 grava a contagem final nos lotes em que elas divergem. Contar
@@ -274,6 +314,10 @@ create table public.estoque_contagens (
   -- pra escolher) — só vira um valor de fato quando o item tem 2+ lotes e
   -- quem contou escolheu qual estava contando (ver src/lib/lotesItem.ts).
   lote text not null default '',
+  -- Código de estoque_locais informado no momento da contagem (onde a
+  -- equipe encontrou fisicamente esse item/lote) — opcional no banco, mas
+  -- a UI exige antes de deixar registrar, pra garantir o mapeamento.
+  local text,
   quantidade integer not null,
   contado_por uuid not null references public.profiles (id),
   contado_em timestamptz not null default now(),
@@ -385,6 +429,7 @@ alter publication supabase_realtime add table public.pedidos;
 alter publication supabase_realtime add table public.pedido_sessoes;
 alter publication supabase_realtime add table public.estoque_contagens;
 alter publication supabase_realtime add table public.estoque_equipes_status;
+alter publication supabase_realtime add table public.estoque_locais;
 
 -- ============================================================
 -- Após rodar este schema:

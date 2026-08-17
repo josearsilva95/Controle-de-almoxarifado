@@ -4,15 +4,17 @@ import { Check, Lock, ScanBarcode } from 'lucide-react'
 import { Botao } from './ui/Botao'
 import { Modal } from './ui/Modal'
 import { ScannerCodigoBarras } from './ScannerCodigoBarras'
+import { LocalAtivoBar } from './LocalAtivoBar'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
 import { finalizarContagemEquipe, registrarContagem } from '../lib/acoesEstoque'
 import { lotesDoItem, itemTemMultiplosLotes } from '../lib/lotesItem'
 import { formatDataHora } from '../lib/tempo'
-import type { EquipeEstoque, EstoqueContagem, EstoqueEquipeStatus, EstoqueItem } from '../types/database'
+import type { EquipeEstoque, EstoqueContagem, EstoqueEquipeStatus, EstoqueItem, EstoqueLocal } from '../types/database'
 
 interface InventarioContagemProps {
   itens: EstoqueItem[]
   contagens: EstoqueContagem[]
+  locais: EstoqueLocal[]
   equipe: EquipeEstoque
   usuarioId: string
   statusEquipe: EstoqueEquipeStatus | undefined
@@ -26,12 +28,14 @@ interface InventarioContagemProps {
 export function InventarioContagem({
   itens,
   contagens,
+  locais,
   equipe,
   usuarioId,
   statusEquipe,
   onContado,
   onStatusMudou,
 }: InventarioContagemProps) {
+  const [localAtivo, setLocalAtivo] = useState<string | null>(null)
   const [busca, setBusca] = useState('')
   const [itemSelecionado, setItemSelecionado] = useState<EstoqueItem | null>(null)
   // null = item tem mais de um lote e ainda não escolheu qual está contando.
@@ -122,6 +126,10 @@ export function InventarioContagem({
   async function confirmar(evento: FormEvent) {
     evento.preventDefault()
     if (!itemSelecionado || loteSelecionado == null) return
+    if (!localAtivo) {
+      setErro('Selecione um local (bipe a etiqueta da prateleira) antes de registrar a contagem.')
+      return
+    }
     const valor = Number(quantidade)
     if (!Number.isInteger(valor) || valor < 0) {
       setErro('Informe uma quantidade válida.')
@@ -129,7 +137,14 @@ export function InventarioContagem({
     }
     setSalvando(true)
     setErro(null)
-    const { erro: erroAcao } = await registrarContagem(itemSelecionado.id, equipe, loteSelecionado, valor, usuarioId)
+    const { erro: erroAcao } = await registrarContagem(
+      itemSelecionado.id,
+      equipe,
+      loteSelecionado,
+      valor,
+      usuarioId,
+      localAtivo
+    )
     setSalvando(false)
     if (erroAcao) {
       setErro(erroAcao)
@@ -171,6 +186,8 @@ export function InventarioContagem({
           </Botao>
         )}
       </div>
+
+      <LocalAtivoBar locais={locais} localAtivo={localAtivo} onMudarLocal={setLocalAtivo} />
 
       <div className="mb-6 sm:max-w-sm">
         <div className="relative flex items-center gap-2">
@@ -312,7 +329,7 @@ export function InventarioContagem({
                   <Botao type="button" variante="secundaria" onClick={cancelarSelecao}>
                     Cancelar
                   </Botao>
-                  <Botao type="submit" disabled={salvando}>
+                  <Botao type="submit" disabled={salvando || !localAtivo}>
                     <Check className="h-4 w-4" />
                     {salvando ? 'Salvando...' : 'Confirmar e buscar próximo'}
                   </Botao>
@@ -334,6 +351,7 @@ export function InventarioContagem({
                 <th className="px-3 py-2.5">Código</th>
                 <th className="px-3 py-2.5">Descrição</th>
                 <th className="px-3 py-2.5">Lote</th>
+                <th className="px-3 py-2.5">Local</th>
                 <th className="px-3 py-2.5">Quantidade</th>
                 <th className="px-3 py-2.5">Quando</th>
               </tr>
@@ -344,6 +362,7 @@ export function InventarioContagem({
                   <td className="px-3 py-2.5 font-medium text-card-foreground">{item.codigo}</td>
                   <td className="px-3 py-2.5 text-card-foreground">{item.descricao}</td>
                   <td className="px-3 py-2.5 text-muted-foreground">{contagem.lote || '—'}</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">{contagem.local || '—'}</td>
                   <td className="px-3 py-2.5 text-muted-foreground">{contagem.quantidade}</td>
                   <td className="px-3 py-2.5 text-muted-foreground">{formatDataHora(contagem.contado_em)}</td>
                 </tr>

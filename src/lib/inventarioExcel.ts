@@ -54,12 +54,13 @@ export function gerarExcelInventarioEquipe(itens: EstoqueItem[], contagens: Esto
     Categoria: l.item.categoria ?? '',
     Depósito: rotuloDeposito(l.item.deposito),
     Lote: l.temLote ? l.lote : '',
+    Local: (equipe === 'equipe_1' ? l.localEquipe1 : l.localEquipe2) ?? '',
     'Qtd. Sistema': l.item.quantidade ?? '',
     [`Qtd. Equipe ${numero}`]: equipe === 'equipe_1' ? l.equipe1 : l.equipe2,
   }))
 
   const planilha = XLSX.utils.json_to_sheet(dados)
-  planilha['!cols'] = [{ wch: 14 }, { wch: 45 }, { wch: 20 }, { wch: 12 }, { wch: 24 }, { wch: 12 }, { wch: 14 }]
+  planilha['!cols'] = [{ wch: 14 }, { wch: 45 }, { wch: 20 }, { wch: 12 }, { wch: 24 }, { wch: 12 }, { wch: 12 }, { wch: 14 }]
 
   const livro = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(livro, planilha, `Equipe ${numero}`)
@@ -80,7 +81,9 @@ export function gerarExcelDivergencias(itens: EstoqueItem[], contagens: EstoqueC
     Lote: l.temLote ? l.lote : '',
     'Qtd. Sistema': l.item.quantidade ?? '',
     'Equipe 1': l.equipe1,
+    'Local Equipe 1': l.localEquipe1 ?? '',
     'Equipe 2': l.equipe2,
+    'Local Equipe 2': l.localEquipe2 ?? '',
     'Equipe 3 (final)': l.equipe3 ?? '',
   }))
 
@@ -93,7 +96,9 @@ export function gerarExcelDivergencias(itens: EstoqueItem[], contagens: EstoqueC
     { wch: 24 },
     { wch: 12 },
     { wch: 10 },
+    { wch: 12 },
     { wch: 10 },
+    { wch: 12 },
     { wch: 15 },
   ]
 

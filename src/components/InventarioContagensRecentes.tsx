@@ -87,6 +87,7 @@ export function InventarioContagensRecentes({ itens, contagens, perfis }: Invent
                   <th className="px-3 py-2.5">Código</th>
                   <th className="px-3 py-2.5">Descrição</th>
                   <th className="px-3 py-2.5">Lote</th>
+                  <th className="px-3 py-2.5">Local</th>
                   <th className="px-3 py-2.5">Equipe</th>
                   <th className="px-3 py-2.5">Quantidade</th>
                   <th className="px-3 py-2.5">Quem</th>
@@ -99,6 +100,7 @@ export function InventarioContagensRecentes({ itens, contagens, perfis }: Invent
                     <td className="px-3 py-2.5 font-medium text-card-foreground">{item.codigo}</td>
                     <td className="px-3 py-2.5 text-card-foreground">{item.descricao}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{contagem.lote || '—'}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{contagem.local || '—'}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{rotuloEquipe(contagem.equipe)}</td>
                     <td className="px-3 py-2.5 font-semibold text-card-foreground">{contagem.quantidade}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">

@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Check, Lock } from 'lucide-react'
 import { classesBotaoIcone } from './ui/Botao'
+import { LocalAtivoBar } from './LocalAtivoBar'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
 import { registrarContagem } from '../lib/acoesEstoque'
 import { compararContagens } from '../lib/inventarioComparacao'
-import type { EstoqueContagem, EstoqueItem } from '../types/database'
+import type { EstoqueContagem, EstoqueItem, EstoqueLocal } from '../types/database'
 
 interface InventarioDivergenciasProps {
   itens: EstoqueItem[]
   contagens: EstoqueContagem[]
+  locais: EstoqueLocal[]
   usuarioId: string
   onContado: () => void
 }
@@ -20,15 +22,19 @@ interface Divergencia {
   qtdEquipe1: number
   qtdEquipe2: number
   qtdEquipe3: number | null
+  localEquipe1: string | null
+  localEquipe2: string | null
 }
 
 function LinhaDivergencia({
   divergencia,
   usuarioId,
+  localAtivo,
   onContado,
 }: {
   divergencia: Divergencia
   usuarioId: string
+  localAtivo: string | null
   onContado: () => void
 }) {
   const [valor, setValor] = useState(divergencia.qtdEquipe3 != null ? String(divergencia.qtdEquipe3) : '')
@@ -37,6 +43,10 @@ function LinhaDivergencia({
   const resolvida = divergencia.qtdEquipe3 != null
 
   async function salvar() {
+    if (!localAtivo) {
+      setErro('Selecione um local (bipe a etiqueta da prateleira) antes de salvar.')
+      return
+    }
     const numero = Number(valor)
     if (!Number.isInteger(numero) || numero < 0) {
       setErro('Quantidade inválida')
@@ -49,7 +59,8 @@ function LinhaDivergencia({
       'equipe_3',
       divergencia.lote,
       numero,
-      usuarioId
+      usuarioId,
+      localAtivo
     )
     setSalvando(false)
     if (erroAcao) {
@@ -64,8 +75,14 @@ function LinhaDivergencia({
       <td className="px-3 py-2.5 font-medium text-card-foreground">{divergencia.item.codigo}</td>
       <td className="px-3 py-2.5 text-card-foreground">{divergencia.item.descricao}</td>
       <td className="px-3 py-2.5 text-muted-foreground">{divergencia.temLote ? divergencia.lote : '—'}</td>
-      <td className="px-3 py-2.5 text-muted-foreground">{divergencia.qtdEquipe1}</td>
-      <td className="px-3 py-2.5 text-muted-foreground">{divergencia.qtdEquipe2}</td>
+      <td className="px-3 py-2.5 text-muted-foreground">
+        {divergencia.qtdEquipe1}
+        {divergencia.localEquipe1 && <span className="ml-1 text-xs">({divergencia.localEquipe1})</span>}
+      </td>
+      <td className="px-3 py-2.5 text-muted-foreground">
+        {divergencia.qtdEquipe2}
+        {divergencia.localEquipe2 && <span className="ml-1 text-xs">({divergencia.localEquipe2})</span>}
+      </td>
       <td className="px-3 py-2.5">
         {resolvida ? (
           <div className="flex items-center gap-1.5 text-sm text-card-foreground">
@@ -88,7 +105,7 @@ function LinhaDivergencia({
                 type="button"
                 className={classesBotaoIcone()}
                 onClick={salvar}
-                disabled={salvando || !valor}
+                disabled={salvando || !valor || !localAtivo}
                 aria-label={`Salvar contagem final de ${divergencia.item.codigo}`}
                 title="Salvar"
               >
@@ -103,8 +120,9 @@ function LinhaDivergencia({
   )
 }
 
-export function InventarioDivergencias({ itens, contagens, usuarioId, onContado }: InventarioDivergenciasProps) {
+export function InventarioDivergencias({ itens, contagens, locais, usuarioId, onContado }: InventarioDivergenciasProps) {
   const [busca, setBusca] = useState('')
+  const [localAtivo, setLocalAtivo] = useState<string | null>(null)
 
   const divergencias = useMemo(() => {
     return compararContagens(itens, contagens)
@@ -117,6 +135,8 @@ export function InventarioDivergencias({ itens, contagens, usuarioId, onContado 
           qtdEquipe1: l.equipe1 as number,
           qtdEquipe2: l.equipe2 as number,
           qtdEquipe3: l.equipe3,
+          localEquipe1: l.localEquipe1,
+          localEquipe2: l.localEquipe2,
         })
       )
       .sort((a, b) => a.item.codigo.localeCompare(b.item.codigo) || a.lote.localeCompare(b.lote))
@@ -138,6 +158,8 @@ export function InventarioDivergencias({ itens, contagens, usuarioId, onContado 
         {divergencias.length} itens/lotes com contagens diferentes entre equipe 1 e equipe 2
         {divergencias.length > 0 && ` · ${pendentes} ainda sem resolução`}
       </div>
+
+      <LocalAtivoBar locais={locais} localAtivo={localAtivo} onMudarLocal={setLocalAtivo} />
 
       <div className="mb-4 sm:max-w-sm">
         <input
@@ -172,6 +194,7 @@ export function InventarioDivergencias({ itens, contagens, usuarioId, onContado 
                   key={`${d.item.id}::${d.lote}`}
                   divergencia={d}
                   usuarioId={usuarioId}
+                  localAtivo={localAtivo}
                   onContado={onContado}
                 />
               ))}

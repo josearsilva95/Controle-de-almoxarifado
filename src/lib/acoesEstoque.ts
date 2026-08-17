@@ -8,19 +8,38 @@ interface ResultadoAcao {
 // Grava a contagem da equipe pra um item/lote — uma linha por (item, equipe,
 // lote); contar de novo pela mesma equipe/lote atualiza a própria linha em
 // vez de duplicar. lote é '' quando o item não tem lote múltiplo (ver
-// src/lib/lotesItem.ts). Não mexe em estoque_itens.quantidade — esse campo
-// é a quantidade oficial do sistema (importada), fica intacto pra comparação.
+// src/lib/lotesItem.ts). local é o código de estoque_locais bipado no
+// momento (onde a equipe achou o item fisicamente), pra mapear o
+// almoxarifado. Não mexe em estoque_itens.quantidade — esse campo é a
+// quantidade oficial do sistema (importada), fica intacto pra comparação.
 export async function registrarContagem(
   itemId: string,
   equipe: EquipeEstoque,
   lote: string,
   quantidade: number,
-  usuarioId: string
+  usuarioId: string,
+  local: string | null
 ): Promise<ResultadoAcao> {
   const { error } = await supabase.from('estoque_contagens').upsert(
-    { item_id: itemId, equipe, lote, quantidade, contado_por: usuarioId, contado_em: new Date().toISOString() },
+    { item_id: itemId, equipe, lote, local, quantidade, contado_por: usuarioId, contado_em: new Date().toISOString() },
     { onConflict: 'item_id,equipe,lote' }
   )
+  if (error) return { erro: error.message }
+  return { erro: null }
+}
+
+// Cadastra um novo código de local (etiqueta de prateleira/nível/lado) pra
+// poder ser bipado durante a contagem.
+export async function criarLocal(codigo: string, rotulo: string | null): Promise<ResultadoAcao> {
+  const { error } = await supabase
+    .from('estoque_locais')
+    .insert({ codigo: codigo.trim(), rotulo: rotulo?.trim() || null })
+  if (error) return { erro: error.message }
+  return { erro: null }
+}
+
+export async function excluirLocal(id: string): Promise<ResultadoAcao> {
+  const { error } = await supabase.from('estoque_locais').delete().eq('id', id)
   if (error) return { erro: error.message }
   return { erro: null }
 }

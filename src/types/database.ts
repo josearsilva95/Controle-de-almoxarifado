@@ -63,9 +63,18 @@ export interface EstoqueContagem {
   equipe: EquipeEstoque
   // '' quando o item não tem lote múltiplo — ver src/lib/lotesItem.ts
   lote: string
+  // Código de EstoqueLocal informado no momento da contagem
+  local: string | null
   quantidade: number
   contado_por: string
   contado_em: string
+}
+
+export interface EstoqueLocal {
+  id: string
+  codigo: string
+  rotulo: string | null
+  created_at: string
 }
 
 export interface EstoqueEquipeStatus {

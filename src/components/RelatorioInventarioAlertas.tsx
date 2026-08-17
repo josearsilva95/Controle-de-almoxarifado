@@ -83,6 +83,9 @@ export function RelatorioInventarioAlertas({ linhasItem, linhasLote }: Relatorio
 
   // Cada linha aqui é um lote específico (quando o item tem mais de um) —
   // um mesmo item pode aparecer mais de uma vez, um por lote divergente.
+  // Mostra o local que cada equipe bipou, quando informado — ajuda a achar
+  // fisicamente a divergência (e sinaliza item remanejado sem avisar, se os
+  // locais das duas equipes forem diferentes).
   const alertasEntreEquipes = useMemo(
     () =>
       linhasLote
@@ -91,7 +94,7 @@ export function RelatorioInventarioAlertas({ linhasItem, linhasLote }: Relatorio
           codigo: l.item.codigo,
           descricao: l.item.descricao,
           lote: l.temLote ? l.lote : null,
-          texto: `equipe 1: ${l.equipe1} · equipe 2: ${l.equipe2}`,
+          texto: `equipe 1: ${l.equipe1}${l.localEquipe1 ? ` (${l.localEquipe1})` : ''} · equipe 2: ${l.equipe2}${l.localEquipe2 ? ` (${l.localEquipe2})` : ''}`,
         })),
     [linhasLote]
   )

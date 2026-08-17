@@ -72,13 +72,14 @@ export function gerarPdfInventarioEquipe(itens: EstoqueItem[], contagens: Estoqu
 
   autoTable(doc, {
     startY: 34,
-    head: [['Código', 'Descrição', 'Categoria', 'Depósito', 'Lote', 'Qtd. sistema', `Qtd. Equipe ${numero}`]],
+    head: [['Código', 'Descrição', 'Categoria', 'Depósito', 'Lote', 'Local', 'Qtd. sistema', `Qtd. Equipe ${numero}`]],
     body: linhas.map((l) => [
       l.item.codigo,
       l.item.descricao,
       l.item.categoria || '—',
       rotuloDeposito(l.item.deposito),
       l.temLote ? l.lote : '—',
+      (equipe === 'equipe_1' ? l.localEquipe1 : l.localEquipe2) || '—',
       l.item.quantidade != null ? String(l.item.quantidade) : '—',
       String(equipe === 'equipe_1' ? l.equipe1 : l.equipe2),
     ]),
@@ -99,7 +100,9 @@ export function gerarPdfDivergencias(itens: EstoqueItem[], contagens: EstoqueCon
 
   autoTable(doc, {
     startY: 34,
-    head: [['Código', 'Descrição', 'Categoria', 'Depósito', 'Lote', 'Qtd. sistema', 'Equipe 1', 'Equipe 2', 'Equipe 3 (final)']],
+    head: [
+      ['Código', 'Descrição', 'Categoria', 'Depósito', 'Lote', 'Qtd. sistema', 'Equipe 1', 'Local eq.1', 'Equipe 2', 'Local eq.2', 'Equipe 3 (final)'],
+    ],
     body: linhas.map((l) => [
       l.item.codigo,
       l.item.descricao,
@@ -108,7 +111,9 @@ export function gerarPdfDivergencias(itens: EstoqueItem[], contagens: EstoqueCon
       l.temLote ? l.lote : '—',
       l.item.quantidade != null ? String(l.item.quantidade) : '—',
       String(l.equipe1),
+      l.localEquipe1 || '—',
       String(l.equipe2),
+      l.localEquipe2 || '—',
       l.equipe3 != null ? String(l.equipe3) : '—',
     ]),
     theme: 'striped',

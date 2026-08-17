@@ -10,6 +10,11 @@ export interface LinhaLote {
   equipe1: number | null
   equipe2: number | null
   equipe3: number | null
+  // Local (código de estoque_locais) que cada equipe bipou ao contar esse
+  // lote — pode diferir entre equipe 1 e 2 (item remanejado sem avisar).
+  localEquipe1: string | null
+  localEquipe2: string | null
+  localEquipe3: string | null
   divergeEntreEquipes: boolean
 }
 
@@ -24,13 +29,18 @@ export interface LinhaItem {
   divergeSistemaEquipe2: boolean
 }
 
+interface EntradaContagem {
+  quantidade: number
+  local: string | null
+}
+
 function chave(itemId: string, equipe: EquipeEstoque, lote: string): string {
   return `${itemId}::${equipe}::${lote}`
 }
 
-function indexarContagens(contagens: EstoqueContagem[]): Map<string, number> {
-  const mapa = new Map<string, number>()
-  for (const c of contagens) mapa.set(chave(c.item_id, c.equipe, c.lote), c.quantidade)
+function indexarContagens(contagens: EstoqueContagem[]): Map<string, EntradaContagem> {
+  const mapa = new Map<string, EntradaContagem>()
+  for (const c of contagens) mapa.set(chave(c.item_id, c.equipe, c.lote), { quantidade: c.quantidade, local: c.local })
   return mapa
 }
 
@@ -45,16 +55,21 @@ export function compararContagens(itens: EstoqueItem[], contagens: EstoqueContag
     const lotes = lotesDoItem(item)
     const temLote = lotes.length > 1
     for (const lote of lotes) {
-      const equipe1 = porChave.get(chave(item.id, 'equipe_1', lote)) ?? null
-      const equipe2 = porChave.get(chave(item.id, 'equipe_2', lote)) ?? null
-      const equipe3 = porChave.get(chave(item.id, 'equipe_3', lote)) ?? null
+      const e1 = porChave.get(chave(item.id, 'equipe_1', lote))
+      const e2 = porChave.get(chave(item.id, 'equipe_2', lote))
+      const e3 = porChave.get(chave(item.id, 'equipe_3', lote))
+      const equipe1 = e1?.quantidade ?? null
+      const equipe2 = e2?.quantidade ?? null
       linhas.push({
         item,
         lote,
         temLote,
         equipe1,
         equipe2,
-        equipe3,
+        equipe3: e3?.quantidade ?? null,
+        localEquipe1: e1?.local ?? null,
+        localEquipe2: e2?.local ?? null,
+        localEquipe3: e3?.local ?? null,
         divergeEntreEquipes: equipe1 != null && equipe2 != null && equipe1 !== equipe2,
       })
     }
@@ -74,9 +89,9 @@ export function compararTotaisPorItem(itens: EstoqueItem[], contagens: EstoqueCo
     function total(equipe: EquipeEstoque): number | null {
       let soma = 0
       for (const lote of lotes) {
-        const valor = porChave.get(chave(item.id, equipe, lote))
-        if (valor == null) return null
-        soma += valor
+        const entrada = porChave.get(chave(item.id, equipe, lote))
+        if (entrada == null) return null
+        soma += entrada.quantidade
       }
       return soma
     }
