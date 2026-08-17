@@ -20,6 +20,7 @@ import { filtrarItensEstoque } from '../lib/buscaEstoque'
 import { podeAdministrar } from '../lib/permissoes'
 import { gerarPdfEstoque } from '../lib/estoquePdf'
 import { gerarPdfInventario } from '../lib/inventarioPdf'
+import { gerarExcelInventario } from '../lib/inventarioExcel'
 import type { EstoqueItem } from '../types/database'
 
 const ITENS_POR_PAGINA = 50
@@ -89,6 +90,10 @@ export function AdminEstoque() {
     gerarPdfInventario(itens, contagens)
   }
 
+  function baixarExcelInventario() {
+    gerarExcelInventario(itens, contagens)
+  }
+
   if (!profile) return null
 
   // Colaborador de equipe (sem ser admin/líder): só a própria tela de
@@ -146,10 +151,16 @@ export function AdminEstoque() {
             </Botao>
           )}
           {modo === 'inventario' && (
-            <Botao variante="secundaria" tamanho="sm" onClick={baixarPdfInventario} disabled={itens.length === 0}>
-              <Download className="h-4 w-4" />
-              Baixar PDF do inventário
-            </Botao>
+            <>
+              <Botao variante="secundaria" tamanho="sm" onClick={baixarExcelInventario} disabled={itens.length === 0}>
+                <Download className="h-4 w-4" />
+                Baixar Excel
+              </Botao>
+              <Botao variante="secundaria" tamanho="sm" onClick={baixarPdfInventario} disabled={itens.length === 0}>
+                <Download className="h-4 w-4" />
+                Baixar PDF
+              </Botao>
+            </>
           )}
           {modo === 'catalogo' && (
             <Botao tamanho="sm" onClick={() => setCriando(true)}>

@@ -276,15 +276,16 @@ create index estoque_contagens_item_id_idx on public.estoque_contagens (item_id)
 
 alter table public.estoque_contagens enable row level security;
 
--- Leitura liberada pra quem administra ou está em qualquer equipe — a
--- equipe_3 precisa ver as contagens de equipe_1 e equipe_2 pra achar as
--- divergências, e todo mundo se beneficia de ver o progresso geral.
-create policy estoque_contagens_select_admin_ou_equipe
+-- Leitura: admin vê tudo; equipe_3 vê tudo (precisa comparar equipe_1 x
+-- equipe_2 pra achar as divergências); equipe_1 e equipe_2 só veem a
+-- própria contagem — contagem cega de verdade, uma não influencia a outra.
+create policy estoque_contagens_select_visao_por_equipe
   on public.estoque_contagens for select
   to authenticated
   using (
     public.is_admin()
-    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+    or equipe = (select equipe_estoque from public.profiles where id = auth.uid())
+    or (select equipe_estoque from public.profiles where id = auth.uid()) = 'equipe_3'
   );
 
 -- Só grava contagem em nome de si mesmo e da própria equipe (admin pode
@@ -300,23 +301,15 @@ create policy estoque_contagens_insert_propria_equipe
     )
   );
 
-create policy estoque_contagens_update_propria_equipe
+-- Depois de enviada, uma contagem só é editável por admin — nem quem
+-- registrou pode alterar depois (evita "corrigir" o número depois de ver
+-- outra contagem). Divergência de verdade se resolve pela equipe_3, não
+-- editando o valor original.
+create policy estoque_contagens_update_admin
   on public.estoque_contagens for update
   to authenticated
-  using (
-    contado_por = auth.uid()
-    and (
-      public.is_admin()
-      or equipe = (select equipe_estoque from public.profiles where id = auth.uid())
-    )
-  )
-  with check (
-    contado_por = auth.uid()
-    and (
-      public.is_admin()
-      or equipe = (select equipe_estoque from public.profiles where id = auth.uid())
-    )
-  );
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- ============================================================
 -- estoque_equipes_status: marca quando uma equipe finaliza a contagem dela.

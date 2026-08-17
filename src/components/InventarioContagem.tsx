@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Check, ScanBarcode } from 'lucide-react'
+import { Check, Lock, ScanBarcode } from 'lucide-react'
 import { Botao } from './ui/Botao'
 import { Cartao } from './ui/Cartao'
 import { ScannerCodigoBarras } from './ScannerCodigoBarras'
@@ -58,12 +58,17 @@ export function InventarioContagem({
       .sort((a, b) => new Date(b.contagem.contado_em).getTime() - new Date(a.contagem.contado_em).getTime())
   }, [contagensDaEquipe, itens])
 
+  const contagemDoSelecionado = useMemo(
+    () => (itemSelecionado ? contagensDaEquipe.find((c) => c.item_id === itemSelecionado.id) : undefined),
+    [itemSelecionado, contagensDaEquipe]
+  )
+
   function selecionarItem(item: EstoqueItem) {
     setItemSelecionado(item)
-    const existente = contagensDaEquipe.find((c) => c.item_id === item.id)
-    setQuantidade(existente ? String(existente.quantidade) : '')
+    setQuantidade('')
     setErro(null)
-    setTimeout(() => inputQuantidadeRef.current?.focus(), 0)
+    const jaContado = contagensDaEquipe.some((c) => c.item_id === item.id)
+    if (!jaContado) setTimeout(() => inputQuantidadeRef.current?.focus(), 0)
   }
 
   function handleCodigoLido(codigoLido: string) {
@@ -192,6 +197,28 @@ export function InventarioContagem({
           )}
           {erroBusca && <p className="mt-2 text-sm text-destructive">{erroBusca}</p>}
         </div>
+      ) : contagemDoSelecionado ? (
+        <Cartao className="mb-6 sm:max-w-sm">
+          <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Lock className="h-3.5 w-3.5" />
+            Já enviado — não dá mais pra editar
+          </div>
+          <p className="font-semibold text-card-foreground">{itemSelecionado.codigo}</p>
+          <p className="mb-3 text-sm text-muted-foreground">{itemSelecionado.descricao}</p>
+          <p className="mb-4 text-sm text-card-foreground">
+            Quantidade enviada: <span className="font-semibold">{contagemDoSelecionado.quantidade}</span>
+            <br />
+            <span className="text-xs text-muted-foreground">
+              em {formatDataHora(contagemDoSelecionado.contado_em)}
+            </span>
+          </p>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Errou o número? Fala com um admin — só ele pode corrigir uma contagem já enviada.
+          </p>
+          <Botao type="button" variante="secundaria" onClick={cancelarSelecao}>
+            Voltar à busca
+          </Botao>
+        </Cartao>
       ) : (
         <Cartao className="mb-6 sm:max-w-sm">
           <p className="text-xs text-muted-foreground">Contando</p>

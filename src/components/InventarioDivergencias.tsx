@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, Check } from 'lucide-react'
+import { AlertTriangle, Check, Lock } from 'lucide-react'
 import { classesBotaoIcone } from './ui/Botao'
 import { filtrarItensEstoque } from '../lib/buscaEstoque'
 import { registrarContagem } from '../lib/acoesEstoque'
@@ -57,27 +57,37 @@ function LinhaDivergencia({
       <td className="px-3 py-2.5 text-muted-foreground">{divergencia.qtdEquipe1}</td>
       <td className="px-3 py-2.5 text-muted-foreground">{divergencia.qtdEquipe2}</td>
       <td className="px-3 py-2.5">
-        <div className="flex items-center gap-1.5">
-          <input
-            className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-            type="number"
-            min={0}
-            step={1}
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-          />
-          <button
-            type="button"
-            className={classesBotaoIcone()}
-            onClick={salvar}
-            disabled={salvando || !valor}
-            aria-label={`Salvar contagem final de ${divergencia.item.codigo}`}
-            title="Salvar"
-          >
-            <Check className="h-4 w-4" />
-          </button>
-        </div>
-        {erro && <p className="mt-1 text-xs text-destructive">{erro}</p>}
+        {resolvida ? (
+          <div className="flex items-center gap-1.5 text-sm text-card-foreground">
+            <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="font-semibold">{divergencia.qtdEquipe3}</span>
+            <span className="text-xs text-muted-foreground">— enviado, só admin corrige</span>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-1.5">
+              <input
+                className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                type="number"
+                min={0}
+                step={1}
+                value={valor}
+                onChange={(e) => setValor(e.target.value)}
+              />
+              <button
+                type="button"
+                className={classesBotaoIcone()}
+                onClick={salvar}
+                disabled={salvando || !valor}
+                aria-label={`Salvar contagem final de ${divergencia.item.codigo}`}
+                title="Salvar"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+            </div>
+            {erro && <p className="mt-1 text-xs text-destructive">{erro}</p>}
+          </>
+        )}
       </td>
     </tr>
   )

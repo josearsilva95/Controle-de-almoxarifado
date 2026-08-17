@@ -5,14 +5,18 @@ import { Cartao } from '../components/ui/Cartao'
 import { KpiCard } from '../components/ui/KpiCard'
 import { GraficoBarrasHorizontais } from '../components/ui/GraficoBarrasHorizontais'
 import { DetalheColaboradorModal } from '../components/DetalheColaboradorModal'
+import { RelatorioInventarioAlertas } from '../components/RelatorioInventarioAlertas'
 import { Botao } from '../components/ui/Botao'
 import { usePedidosContext } from '../hooks/usePedidosContext'
 import { usePerfis } from '../hooks/usePerfis'
 import { useDesempenhoColaboradores } from '../hooks/useDesempenhoColaboradores'
 import type { DesempenhoColaborador } from '../hooks/useDesempenhoColaboradores'
+import { useEstoque } from '../hooks/useEstoque'
+import { useEstoqueContagens } from '../hooks/useEstoqueContagens'
 import { CORES, rotuloUrgencia } from '../lib/cores'
 import { formatDataHora, formatDuracao } from '../lib/tempo'
 import { gerarRelatorioMensalPdf } from '../lib/relatorioPdf'
+import { compararContagens } from '../lib/inventarioComparacao'
 import type { Urgencia } from '../types/database'
 
 const URGENCIAS: Urgencia[] = ['urgente', 'medio', 'nao_urgente']
@@ -39,7 +43,14 @@ export function AdminRelatorios() {
   const { pedidos, carregando } = usePedidosContext()
   const { perfis } = usePerfis()
   const { desempenho } = useDesempenhoColaboradores(pedidos)
+  const { itens: itensEstoque } = useEstoque()
+  const { contagens } = useEstoqueContagens()
   const [colaboradorSelecionado, setColaboradorSelecionado] = useState<DesempenhoColaborador | null>(null)
+
+  const comparacaoInventario = useMemo(
+    () => compararContagens(itensEstoque, contagens),
+    [itensEstoque, contagens]
+  )
 
   const stats = useMemo(() => {
     const agora = new Date()
@@ -230,6 +241,8 @@ export function AdminRelatorios() {
           </ul>
         )}
       </Cartao>
+
+      <RelatorioInventarioAlertas linhas={comparacaoInventario} />
 
       {colaboradorSelecionado && (
         <DetalheColaboradorModal
