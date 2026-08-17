@@ -44,3 +44,22 @@ export async function reabrirContagemEquipe(equipe: EquipeEstoque): Promise<Resu
   if (error) return { erro: error.message }
   return { erro: null }
 }
+
+// Zera todos os lançamentos de contagem e o status de finalização das
+// equipes, pra começar uma auditoria de inventário do zero. Não mexe no
+// catálogo (estoque_itens) — só na contagem em cima dele.
+export async function reiniciarInventario(): Promise<ResultadoAcao> {
+  const { error: erroContagens } = await supabase
+    .from('estoque_contagens')
+    .delete()
+    .not('id', 'is', null)
+  if (erroContagens) return { erro: erroContagens.message }
+
+  const { error: erroStatus } = await supabase
+    .from('estoque_equipes_status')
+    .delete()
+    .not('equipe', 'is', null)
+  if (erroStatus) return { erro: erroStatus.message }
+
+  return { erro: null }
+}

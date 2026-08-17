@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Download, Pencil, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Pencil, RotateCcw, Search, Trash2 } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { AppShell } from '../components/AppShell'
 import { EstoqueItemModal } from '../components/EstoqueItemModal'
@@ -23,6 +23,7 @@ import { gerarPdfEstoque } from '../lib/estoquePdf'
 import { gerarPdfInventario, gerarPdfInventarioEquipe, gerarPdfDivergencias } from '../lib/inventarioPdf'
 import { gerarExcelInventario, gerarExcelInventarioEquipe, gerarExcelDivergencias } from '../lib/inventarioExcel'
 import { compararContagens } from '../lib/inventarioComparacao'
+import { reiniciarInventario } from '../lib/acoesEstoque'
 import type { EstoqueItem } from '../types/database'
 
 const ITENS_POR_PAGINA = 50
@@ -50,6 +51,7 @@ export function AdminEstoque() {
   const [pagina, setPagina] = useState(1)
   const [itemEditando, setItemEditando] = useState<EstoqueItem | null>(null)
   const [criando, setCriando] = useState(false)
+  const [reiniciando, setReiniciando] = useState(false)
 
   const comparacaoInventario = useMemo(() => compararContagens(itens, contagens), [itens, contagens])
 
@@ -92,6 +94,22 @@ export function AdminEstoque() {
       return
     }
     recarregar()
+  }
+
+  async function reiniciarContagens() {
+    const confirmado = window.confirm(
+      `Reiniciar o inventário? Isso apaga TODOS os lançamentos de contagem das 3 equipes (${contagens.length} no total) e o status de finalização, pra começar uma auditoria do zero. O catálogo e as quantidades do sistema não são afetados. Essa ação não tem volta.`
+    )
+    if (!confirmado) return
+    setReiniciando(true)
+    const { erro } = await reiniciarInventario()
+    setReiniciando(false)
+    if (erro) {
+      window.alert(`Não foi possível reiniciar o inventário: ${erro}`)
+      return
+    }
+    recarregarContagens()
+    recarregarStatus()
   }
 
   function baixarPdf() {
@@ -196,6 +214,15 @@ export function AdminEstoque() {
               <Botao variante="secundaria" tamanho="sm" onClick={baixarPdfInventario} disabled={itens.length === 0}>
                 <Download className="h-4 w-4" />
                 Baixar PDF
+              </Botao>
+              <Botao
+                variante="destrutiva"
+                tamanho="sm"
+                onClick={reiniciarContagens}
+                disabled={reiniciando || contagens.length === 0}
+              >
+                <RotateCcw className="h-4 w-4" />
+                {reiniciando ? 'Reiniciando...' : 'Reiniciar inventário'}
               </Botao>
             </>
           )}

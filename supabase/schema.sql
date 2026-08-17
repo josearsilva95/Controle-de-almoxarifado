@@ -315,6 +315,13 @@ create policy estoque_contagens_update_admin
   using (public.is_admin())
   with check (public.is_admin());
 
+-- Só admin apaga contagens — usado pelo "Reiniciar inventário" (zera os
+-- lançamentos de todas as equipes pra começar uma auditoria nova).
+create policy estoque_contagens_delete_admin
+  on public.estoque_contagens for delete
+  to authenticated
+  using (public.is_admin());
+
 -- ============================================================
 -- estoque_equipes_status: marca quando uma equipe finaliza a contagem dela.
 -- Usado só pra decidir quando mostrar o relatório de itens que uma equipe
