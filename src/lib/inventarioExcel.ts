@@ -67,7 +67,8 @@ export function gerarExcelInventarioEquipe(itens: EstoqueItem[], contagens: Esto
   XLSX.writeFile(livro, `inventario-equipe-${numero}-${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
 
-// Só as divergências (equipe 1 x equipe 2), pra equipe 3 trabalhar em cima.
+// Só as divergências (equipe 1 x equipe 2), pra equipe 3 trabalhar em cima
+// — inclui o saldo real do sistema, pra dar contexto na hora de resolver.
 export function gerarExcelDivergencias(itens: EstoqueItem[], contagens: EstoqueContagem[]) {
   const linhas = compararContagens(itens, contagens).filter((l) => l.divergeEntreEquipes)
 
@@ -77,13 +78,24 @@ export function gerarExcelDivergencias(itens: EstoqueItem[], contagens: EstoqueC
     Categoria: l.item.categoria ?? '',
     Depósito: rotuloDeposito(l.item.deposito),
     'Lote(s)': l.item.lotes ?? '',
+    'Qtd. Sistema': l.sistema ?? '',
     'Equipe 1': l.equipe1,
     'Equipe 2': l.equipe2,
     'Equipe 3 (final)': l.equipe3 ?? '',
   }))
 
   const planilha = XLSX.utils.json_to_sheet(dados)
-  planilha['!cols'] = [{ wch: 14 }, { wch: 45 }, { wch: 20 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 15 }]
+  planilha['!cols'] = [
+    { wch: 14 },
+    { wch: 45 },
+    { wch: 20 },
+    { wch: 12 },
+    { wch: 24 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 15 },
+  ]
 
   const livro = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(livro, planilha, 'Divergências')
