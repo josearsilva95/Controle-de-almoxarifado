@@ -282,6 +282,7 @@ export function AdminEstoque() {
                       <th className="px-3 py-2.5">Descrição</th>
                       <th className="px-3 py-2.5">Categoria</th>
                       <th className="px-3 py-2.5">Depósito</th>
+                      <th className="px-3 py-2.5">Lote(s)</th>
                       <th className="px-3 py-2.5">Qtd. sistema</th>
                       <th className="px-3 py-2.5 text-right">Ações</th>
                     </tr>
@@ -293,6 +294,7 @@ export function AdminEstoque() {
                         <td className="px-3 py-2.5 text-card-foreground">{item.descricao}</td>
                         <td className="px-3 py-2.5 text-muted-foreground">{item.categoria || '—'}</td>
                         <td className="px-3 py-2.5 text-muted-foreground">{rotuloDeposito(item.deposito)}</td>
+                        <td className="px-3 py-2.5 text-muted-foreground">{item.lotes || '—'}</td>
                         <td className="px-3 py-2.5 text-muted-foreground">
                           {item.quantidade != null ? item.quantidade : '—'}
                         </td>

@@ -52,6 +52,7 @@ export interface EstoqueItem {
   deposito: Deposito
   categoria: string | null
   quantidade: number | null
+  lotes: string | null
   created_at: string
   updated_at: string
 }

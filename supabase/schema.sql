@@ -213,6 +213,10 @@ create table public.estoque_itens (
   -- Quantidade oficial do sistema (importada) — não é sobrescrita pelas
   -- contagens do inventário, que ficam à parte em estoque_contagens.
   quantidade integer,
+  -- Lote(s)/rastreabilidade do sistema de origem, só informativo — texto
+  -- livre, vários lotes separados por vírgula quando o item tem mais de um
+  -- (a quantidade já vem somada entre eles, não conta por lote separado).
+  lotes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (codigo, deposito)

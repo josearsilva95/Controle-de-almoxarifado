@@ -20,6 +20,7 @@ export function EstoqueItemModal({ item, categoriasExistentes, onFechar, onSalvo
   const [categoria, setCategoria] = useState(item?.categoria ?? '')
   const [deposito, setDeposito] = useState<Deposito>(item?.deposito ?? 'deposito_1')
   const [quantidade, setQuantidade] = useState(item?.quantidade != null ? String(item.quantidade) : '')
+  const [lotes, setLotes] = useState(item?.lotes ?? '')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
@@ -34,6 +35,7 @@ export function EstoqueItemModal({ item, categoriasExistentes, onFechar, onSalvo
       categoria: categoria.trim() || null,
       deposito,
       quantidade: quantidade.trim() ? Number(quantidade) : null,
+      lotes: lotes.trim() || null,
     }
 
     const { error } = item
@@ -105,6 +107,17 @@ export function EstoqueItemModal({ item, categoriasExistentes, onFechar, onSalvo
             value={quantidade}
             onChange={(e) => setQuantidade(e.target.value)}
             placeholder="Não informada"
+          />
+        </label>
+
+        <label className="mb-4 flex flex-col gap-1 text-sm font-medium text-card-foreground">
+          Lote(s) (opcional)
+          <input
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+            type="text"
+            value={lotes}
+            onChange={(e) => setLotes(e.target.value)}
+            placeholder="Ex: CHB-00014022, CHB-00099334"
           />
         </label>
 
