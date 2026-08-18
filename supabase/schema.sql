@@ -432,6 +432,32 @@ create policy estoque_equipes_status_delete_admin
 -- ao mesmo tempo (ver gerar_ciclo_hoje() abaixo).
 -- ============================================================
 
+-- ============================================================
+-- configuracoes: chave/valor genérico pra ligar/desligar coisas do app sem
+-- precisar de migração nova cada vez (ex: pausar a contagem cíclica
+-- enquanto a auditoria grande estiver rolando).
+-- ============================================================
+
+create table public.configuracoes (
+  chave text primary key,
+  valor boolean not null default false
+);
+
+insert into public.configuracoes (chave, valor) values ('ciclo_pausado', false);
+
+alter table public.configuracoes enable row level security;
+
+create policy configuracoes_select_autenticados
+  on public.configuracoes for select
+  to authenticated
+  using (true);
+
+create policy configuracoes_update_admin
+  on public.configuracoes for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
 create table public.estoque_ciclos (
   id uuid primary key default gen_random_uuid(),
   data_referencia date not null unique,
@@ -517,6 +543,10 @@ begin
     raise exception 'Apenas quem tem acesso ao Estoque pode gerar o ciclo do dia.';
   end if;
 
+  if coalesce((select valor from public.configuracoes where chave = 'ciclo_pausado'), false) then
+    return null;
+  end if;
+
   select id into ciclo_existente from public.estoque_ciclos where data_referencia = current_date;
   if ciclo_existente is not null then
     return ciclo_existente;
@@ -560,6 +590,7 @@ alter publication supabase_realtime add table public.estoque_equipes_status;
 alter publication supabase_realtime add table public.estoque_locais;
 alter publication supabase_realtime add table public.estoque_ciclos;
 alter publication supabase_realtime add table public.estoque_ciclos_itens;
+alter publication supabase_realtime add table public.configuracoes;
 
 -- ============================================================
 -- Após rodar este schema:

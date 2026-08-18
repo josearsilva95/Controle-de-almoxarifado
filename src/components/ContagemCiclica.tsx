@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Check, ClipboardCheck, Lock } from 'lucide-react'
+import { Check, ClipboardCheck, Lock, Pause, Play } from 'lucide-react'
 import { Botao } from './ui/Botao'
 import { Cartao } from './ui/Cartao'
 import { LocalAtivoBar } from './LocalAtivoBar'
-import { registrarContagemCiclica } from '../lib/acoesEstoque'
+import { definirCicloPausado, registrarContagemCiclica } from '../lib/acoesEstoque'
 import { formatDataHora } from '../lib/tempo'
 import type { EstoqueCiclo, EstoqueCicloItemComItem, EstoqueLocal } from '../types/database'
 
@@ -14,6 +14,8 @@ interface ContagemCiclicaProps {
   locais: EstoqueLocal[]
   usuarioId: string
   carregando: boolean
+  pausado: boolean
+  souAdmin: boolean
   onAtualizado: () => void
 }
 
@@ -101,11 +103,50 @@ function LinhaItemCiclo({
 // gerar_ciclo_hoje() no banco), separado do inventário geral em 3 equipes.
 // Não mostra a quantidade do sistema durante a contagem, mesmo motivo do
 // inventário — evita que quem conta só copie o número esperado.
-export function ContagemCiclica({ ciclo, itens, locais, usuarioId, carregando, onAtualizado }: ContagemCiclicaProps) {
+export function ContagemCiclica({
+  ciclo,
+  itens,
+  locais,
+  usuarioId,
+  carregando,
+  pausado,
+  souAdmin,
+  onAtualizado,
+}: ContagemCiclicaProps) {
   const [localAtivo, setLocalAtivo] = useState<string | null>(null)
+  const [alternando, setAlternando] = useState(false)
+
+  async function alternarPausa() {
+    setAlternando(true)
+    const { erro } = await definirCicloPausado(!pausado)
+    setAlternando(false)
+    if (erro) {
+      window.alert(`Não foi possível ${pausado ? 'retomar' : 'pausar'}: ${erro}`)
+      return
+    }
+    onAtualizado()
+  }
+
+  const botaoPausa = souAdmin && (
+    <Botao variante="secundaria" tamanho="sm" onClick={alternarPausa} disabled={alternando}>
+      {pausado ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+      {pausado ? 'Retomar contagem cíclica' : 'Pausar contagem cíclica'}
+    </Botao>
+  )
 
   if (carregando) {
     return <p className="py-8 text-center text-sm text-muted-foreground">Carregando contagem de hoje...</p>
+  }
+
+  if (pausado) {
+    return (
+      <div className="py-8 text-center">
+        <p className="mb-3 text-sm text-muted-foreground">
+          Contagem cíclica pausada — nenhum ciclo novo está sendo gerado.
+        </p>
+        {botaoPausa}
+      </div>
+    )
   }
 
   if (!ciclo || itens.length === 0) {
@@ -116,11 +157,14 @@ export function ContagemCiclica({ ciclo, itens, locais, usuarioId, carregando, o
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-sm text-secondary-foreground">
-        <ClipboardCheck className="h-4 w-4 shrink-0" />
-        Contagem cíclica de hoje ({new Date(ciclo.data_referencia).toLocaleDateString('pt-BR')}) — {contados} de{' '}
-        {itens.length} itens conferidos.
-        {ciclo.finalizado_em && ' Concluída.'}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md bg-secondary px-3 py-2 text-sm text-secondary-foreground">
+        <span className="flex items-center gap-2">
+          <ClipboardCheck className="h-4 w-4 shrink-0" />
+          Contagem cíclica de hoje ({new Date(ciclo.data_referencia).toLocaleDateString('pt-BR')}) — {contados} de{' '}
+          {itens.length} itens conferidos.
+          {ciclo.finalizado_em && ' Concluída.'}
+        </span>
+        {botaoPausa}
       </div>
 
       <LocalAtivoBar locais={locais} localAtivo={localAtivo} onMudarLocal={setLocalAtivo} />

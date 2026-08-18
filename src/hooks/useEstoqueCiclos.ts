@@ -7,6 +7,7 @@ import type { EstoqueCiclo, EstoqueCicloItemComItem } from '../types/database'
 export function useEstoqueCiclos(temAcesso: boolean) {
   const [ciclo, setCiclo] = useState<EstoqueCiclo | null>(null)
   const [itens, setItens] = useState<EstoqueCicloItemComItem[]>([])
+  const [pausado, setPausado] = useState(false)
   const [carregando, setCarregando] = useState(true)
 
   const recarregar = useCallback(async () => {
@@ -14,6 +15,14 @@ export function useEstoqueCiclos(temAcesso: boolean) {
       setCarregando(false)
       return
     }
+    const { data: configData, error: erroConfig } = await supabase
+      .from('configuracoes')
+      .select('valor')
+      .eq('chave', 'ciclo_pausado')
+      .maybeSingle()
+    if (erroConfig) console.error('Erro ao carregar configuração:', erroConfig.message)
+    setPausado(configData?.valor ?? false)
+
     const hoje = new Date().toISOString().slice(0, 10)
     const { data: cicloData, error: erroCiclo } = await supabase
       .from('estoque_ciclos')
@@ -46,7 +55,8 @@ export function useEstoqueCiclos(temAcesso: boolean) {
   // Gera o ciclo do dia (se ainda não existir) assim que alguém com acesso
   // abre o app — sem depender de agendador externo. gerar_ciclo_hoje() no
   // banco garante que só um ciclo é criado por dia, mesmo com duas pessoas
-  // abrindo ao mesmo tempo.
+  // abrindo ao mesmo tempo, e não gera nada se a contagem cíclica estiver
+  // pausada (configuracoes.ciclo_pausado).
   useEffect(() => {
     if (!temAcesso) {
       setCarregando(false)
@@ -65,6 +75,7 @@ export function useEstoqueCiclos(temAcesso: boolean) {
       .channel('estoque-ciclos-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'estoque_ciclos' }, () => recarregar())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'estoque_ciclos_itens' }, () => recarregar())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes' }, () => recarregar())
       .subscribe()
 
     return () => {
@@ -73,5 +84,5 @@ export function useEstoqueCiclos(temAcesso: boolean) {
     }
   }, [temAcesso, recarregar])
 
-  return { ciclo, itens, carregando, recarregar }
+  return { ciclo, itens, pausado, carregando, recarregar }
 }

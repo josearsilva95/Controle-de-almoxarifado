@@ -4,6 +4,7 @@ import type { EstoqueCiclo, EstoqueCicloItemComItem } from '../types/database'
 export interface EstoqueCiclosContextValue {
   ciclo: EstoqueCiclo | null
   itens: EstoqueCicloItemComItem[]
+  pausado: boolean
   carregando: boolean
   recarregar: () => void
 }

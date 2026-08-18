@@ -130,3 +130,15 @@ export async function marcarCicloVisto(cicloId: string, usuarioId: string): Prom
   if (error) return { erro: error.message }
   return { erro: null }
 }
+
+// Liga/desliga a geração automática de novos ciclos (ex: pausar durante a
+// auditoria grande). Não apaga nada — só impede gerar_ciclo_hoje() de criar
+// ciclos novos enquanto estiver pausado.
+export async function definirCicloPausado(pausado: boolean): Promise<ResultadoAcao> {
+  const { error } = await supabase
+    .from('configuracoes')
+    .update({ valor: pausado })
+    .eq('chave', 'ciclo_pausado')
+  if (error) return { erro: error.message }
+  return { erro: null }
+}

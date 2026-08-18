@@ -48,7 +48,13 @@ export function AdminEstoque() {
   const { contagens, recarregar: recarregarContagens } = useEstoqueContagens()
   const { status: statusEquipes, recarregar: recarregarStatus } = useEstoqueEquipesStatus()
   const { locais, recarregar: recarregarLocais } = useEstoqueLocais()
-  const { ciclo, itens: itensCiclo, carregando: carregandoCiclo, recarregar: recarregarCiclo } = useEstoqueCiclosContext()
+  const {
+    ciclo,
+    itens: itensCiclo,
+    pausado: cicloPausado,
+    carregando: carregandoCiclo,
+    recarregar: recarregarCiclo,
+  } = useEstoqueCiclosContext()
   const { perfis, recarregar: recarregarPerfis } = usePerfis()
   const [modo, setModo] = useState<Modo>('catalogo')
   const [escopoRelatorio, setEscopoRelatorio] = useState<EscopoRelatorio>('geral')
@@ -166,6 +172,8 @@ export function AdminEstoque() {
           locais={locais}
           usuarioId={profile.id}
           carregando={carregandoCiclo}
+          pausado={cicloPausado}
+          souAdmin={false}
           onAtualizado={recarregarCiclo}
         />
         <hr className="my-6 border-border" />
@@ -288,6 +296,8 @@ export function AdminEstoque() {
           locais={locais}
           usuarioId={profile.id}
           carregando={carregandoCiclo}
+          pausado={cicloPausado}
+          souAdmin={true}
           onAtualizado={recarregarCiclo}
         />
       )}
