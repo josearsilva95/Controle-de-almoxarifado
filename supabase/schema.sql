@@ -115,6 +115,19 @@ as $$
   );
 $$;
 
+-- Usada pela policy de leitura de profiles, pra evitar autorreferência
+-- recursiva (buscar o próprio depósito consultando a mesma tabela que a
+-- policy protege) — mesmo motivo de is_admin() ser security definer.
+create function public.meu_deposito()
+returns text
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select deposito from public.profiles where id = auth.uid();
+$$;
+
 -- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
@@ -123,14 +136,22 @@ alter table public.profiles enable row level security;
 alter table public.pedidos enable row level security;
 alter table public.pedido_sessoes enable row level security;
 
--- profiles: qualquer autenticado pode ler todos os perfis (precisa exibir
--- "iniciado por fulano" etc.). Criar/editar credenciais continua só pela Edge
--- Function rapid-worker (service_role) — esse update aqui é só pra campos de
--- dado simples que o admin ajusta direto pela UI, como a equipe do estoque.
-create policy profiles_select_autenticados
+-- profiles: cada um lê o próprio perfil, admin/líder geral lê todo mundo, e
+-- qualquer outro autenticado só lê colegas do mesmo depósito (precisa
+-- exibir "iniciado por fulano" etc. nas requisições visíveis pra ele) —
+-- antes era leitura liberada pra qualquer autenticado, o que vazava e-mail/
+-- papel/depósito de todo mundo pra qualquer conta. Criar/editar credenciais
+-- continua só pela Edge Function rapid-worker (service_role) — esse update
+-- aqui é só pra campos de dado simples que o admin ajusta direto pela UI,
+-- como a equipe do estoque.
+create policy profiles_select_escopo
   on public.profiles for select
   to authenticated
-  using (true);
+  using (
+    id = auth.uid()
+    or public.is_admin()
+    or deposito is not distinct from public.meu_deposito()
+  );
 
 create policy profiles_update_admin
   on public.profiles for update
@@ -156,14 +177,24 @@ create policy pedidos_insert_admin
   to authenticated
   with check (public.is_admin());
 
--- pedidos: update liberado a autenticados. A máquina de estados fina fica
--- garantida pelo índice único parcial em pedido_sessoes + a UI só oferecendo
--- os botões válidos para cada status (trade-off pragmático documentado no plano).
-create policy pedidos_update_autenticados
+-- pedidos: update restrito ao mesmo escopo da leitura (mesmo depósito, ou
+-- admin/líder geral) — antes era liberado pra qualquer autenticado (mesmo
+-- de outro depósito), bastando saber o id da linha. A máquina de estados
+-- fina continua garantida pelo índice único parcial em pedido_sessoes + a
+-- UI só oferecendo os botões válidos para cada status.
+create policy pedidos_update_por_deposito
   on public.pedidos for update
   to authenticated
-  using (true)
-  with check (true);
+  using (
+    public.is_admin()
+    or coalesce((select lider_geral from public.profiles where id = auth.uid()), false)
+    or deposito = (select deposito from public.profiles where id = auth.uid())
+  )
+  with check (
+    public.is_admin()
+    or coalesce((select lider_geral from public.profiles where id = auth.uid()), false)
+    or deposito = (select deposito from public.profiles where id = auth.uid())
+  );
 
 -- pedidos: só admin exclui (inclusive requisições já finalizadas).
 create policy pedidos_delete_admin
@@ -171,11 +202,21 @@ create policy pedidos_delete_admin
   to authenticated
   using (public.is_admin());
 
--- pedido_sessoes: leitura liberada a todo autenticado (admin precisa ver tudo).
-create policy pedido_sessoes_select_autenticados
+-- pedido_sessoes: mesmo escopo por depósito do pedido pai — antes era
+-- liberado pra qualquer autenticado, vazando quem trabalhou em quê e
+-- quando em depósitos que a pessoa nem consegue ver via pedidos.
+create policy pedido_sessoes_select_por_deposito
   on public.pedido_sessoes for select
   to authenticated
-  using (true);
+  using (
+    public.is_admin()
+    or coalesce((select lider_geral from public.profiles where id = auth.uid()), false)
+    or exists (
+      select 1 from public.pedidos p
+      where p.id = pedido_sessoes.pedido_id
+        and p.deposito = (select deposito from public.profiles where id = auth.uid())
+    )
+  );
 
 -- pedido_sessoes: um funcionário só pode abrir sessão em seu próprio nome.
 create policy pedido_sessoes_insert_propria
@@ -509,12 +550,18 @@ create policy estoque_ciclos_itens_select_admin_ou_equipe
     or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
   );
 
-create policy estoque_ciclos_itens_update_admin_ou_equipe
+-- Só admin edita um item do ciclo que já foi contado — mesma regra da
+-- auditoria grande (estoque_contagens), pra ninguém sobrescrever sem
+-- querer o que outra pessoa já registrou naquele dia.
+create policy estoque_ciclos_itens_update_admin_ou_nao_contado
   on public.estoque_ciclos_itens for update
   to authenticated
   using (
     public.is_admin()
-    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+    or (
+      coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+      and quantidade_contada is null
+    )
   )
   with check (
     public.is_admin()
