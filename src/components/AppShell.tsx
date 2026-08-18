@@ -148,7 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 pb-24 sm:px-6 sm:py-6 md:pb-6">{children}</main>
+        <main className="mx-auto w-full max-w-[1800px] flex-1 px-4 py-5 pb-24 sm:px-6 sm:py-6 md:pb-6">{children}</main>
       </div>
 
       {/* Barra de navegação inferior — só no celular (a lateral cobre telas maiores). */}
