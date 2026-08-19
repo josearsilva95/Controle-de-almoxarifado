@@ -415,8 +415,11 @@ export function MedicaoChapas() {
       }
     }
 
+    // No celular, dois downloads disparados no mesmo instante costumam
+    // fazer o navegador silenciosamente ignorar o segundo — um intervalo
+    // pequeno entre os dois resolve isso na maioria dos aparelhos.
     if (r.contornoMm.length >= 3) baixarDXF(r.contornoMm, nomeArquivo)
-    gerarPdfChapa(r, nomeArquivo)
+    setTimeout(() => gerarPdfChapa(r, nomeArquivo), 400)
     setSalvando(false)
   }
 
