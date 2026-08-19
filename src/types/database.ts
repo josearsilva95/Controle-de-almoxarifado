@@ -117,3 +117,18 @@ export interface PedidoSessao {
   encerrada_por_evento: 'pausa' | 'finalizacao' | null
   motivo_pausa: MotivoPausa | null
 }
+
+export interface Retalho {
+  id: string
+  codigo: string
+  material_slug: string | null
+  material_label: string | null
+  espessura_mm: number | null
+  shape_mode: 'irregular' | 'circular'
+  dim1_mm: number | null
+  dim2_mm: number | null
+  area_mm2: number | null
+  peso_kg: number | null
+  criado_por: string | null
+  created_at: string
+}

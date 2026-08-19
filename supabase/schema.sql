@@ -627,6 +627,44 @@ $$;
 grant execute on function public.gerar_ciclo_hoje() to authenticated;
 
 -- ============================================================
+-- retalhos: estoque de sobras de chapa medidas pela ferramenta de
+-- visão computacional (Medição de Chapas) — módulo separado do Estoque
+-- principal, aberto a qualquer autenticado (ferramenta de chão de fábrica).
+-- ============================================================
+
+create table public.retalhos (
+  id uuid primary key default gen_random_uuid(),
+  codigo text not null unique,
+  material_slug text,
+  material_label text,
+  espessura_mm numeric,
+  shape_mode text not null check (shape_mode in ('irregular', 'circular')),
+  dim1_mm numeric,
+  dim2_mm numeric,
+  area_mm2 numeric,
+  peso_kg numeric,
+  criado_por uuid references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+
+alter table public.retalhos enable row level security;
+
+create policy retalhos_select_autenticados
+  on public.retalhos for select
+  to authenticated
+  using (true);
+
+create policy retalhos_insert_autenticados
+  on public.retalhos for insert
+  to authenticated
+  with check (criado_por = auth.uid());
+
+create policy retalhos_delete_autenticados
+  on public.retalhos for delete
+  to authenticated
+  using (true);
+
+-- ============================================================
 -- Realtime — habilita replicação para as tabelas usadas nos hooks
 -- ============================================================
 
@@ -638,6 +676,7 @@ alter publication supabase_realtime add table public.estoque_locais;
 alter publication supabase_realtime add table public.estoque_ciclos;
 alter publication supabase_realtime add table public.estoque_ciclos_itens;
 alter publication supabase_realtime add table public.configuracoes;
+alter publication supabase_realtime add table public.retalhos;
 
 -- ============================================================
 -- Após rodar este schema:

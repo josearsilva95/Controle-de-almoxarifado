@@ -3,6 +3,7 @@ import { AuthProvider } from './auth/AuthContext'
 import { RotaProtegida } from './auth/RotaProtegida'
 import { RotaAdmin } from './auth/RotaAdmin'
 import { RotaEstoque } from './auth/RotaEstoque'
+import { RotaAutenticada } from './auth/RotaAutenticada'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { PedidosProvider } from './hooks/PedidosProvider'
 import { EstoqueCiclosProvider } from './hooks/EstoqueCiclosProvider'
@@ -13,6 +14,7 @@ import { AdminColaboradores } from './pages/AdminColaboradores'
 import { AdminNovoColaborador } from './pages/AdminNovoColaborador'
 import { AdminRelatorios } from './pages/AdminRelatorios'
 import { AdminEstoque } from './pages/AdminEstoque'
+import { MedicaoChapas } from './pages/MedicaoChapas'
 import { FuncionarioTarefas } from './pages/FuncionarioTarefas'
 
 export function App() {
@@ -78,6 +80,14 @@ export function App() {
                   <RotaProtegida role="funcionario">
                     <FuncionarioTarefas />
                   </RotaProtegida>
+                }
+              />
+              <Route
+                path="/medicao-chapas"
+                element={
+                  <RotaAutenticada>
+                    <MedicaoChapas />
+                  </RotaAutenticada>
                 }
               />
               <Route path="/" element={<Navigate to="/login" replace />} />
