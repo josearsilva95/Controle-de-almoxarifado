@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import type { FormEvent } from 'react'
 import { MapPin, ScanBarcode } from 'lucide-react'
 import { ScannerCodigoBarras } from './ScannerCodigoBarras'
+import { Botao } from './ui/Botao'
+import { criarLocal } from '../lib/acoesEstoque'
 import type { EstoqueLocal } from '../types/database'
 
 interface LocalAtivoBarProps {
@@ -16,20 +19,43 @@ interface LocalAtivoBarProps {
 export function LocalAtivoBar({ locais, localAtivo, onMudarLocal }: LocalAtivoBarProps) {
   const [escaneando, setEscaneando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [codigoNaoCadastrado, setCodigoNaoCadastrado] = useState<string | null>(null)
+  const [rotuloNovo, setRotuloNovo] = useState('')
+  const [cadastrando, setCadastrando] = useState(false)
 
   function validarEDefinir(codigoBruto: string) {
-    const encontrado = locais.find((l) => l.codigo.toLowerCase() === codigoBruto.trim().toLowerCase())
+    const codigo = codigoBruto.trim()
+    const encontrado = locais.find((l) => l.codigo.toLowerCase() === codigo.toLowerCase())
     if (!encontrado) {
-      setErro(`Local "${codigoBruto}" não está cadastrado.`)
+      setErro(null)
+      setRotuloNovo('')
+      setCodigoNaoCadastrado(codigo)
       return
     }
     setErro(null)
+    setCodigoNaoCadastrado(null)
     onMudarLocal(encontrado.codigo)
   }
 
   function handleLido(codigo: string) {
     setEscaneando(false)
     validarEDefinir(codigo)
+  }
+
+  async function cadastrarECadastrar(evento: FormEvent) {
+    evento.preventDefault()
+    if (!codigoNaoCadastrado) return
+    setCadastrando(true)
+    setErro(null)
+    const { erro: erroAcao } = await criarLocal(codigoNaoCadastrado, rotuloNovo || null)
+    setCadastrando(false)
+    if (erroAcao) {
+      setErro(erroAcao)
+      return
+    }
+    onMudarLocal(codigoNaoCadastrado)
+    setCodigoNaoCadastrado(null)
+    setRotuloNovo('')
   }
 
   return (
@@ -75,6 +101,39 @@ export function LocalAtivoBar({ locais, localAtivo, onMudarLocal }: LocalAtivoBa
         </div>
       </div>
       {erro && <p className="mt-2 text-xs text-destructive">{erro}</p>}
+      {codigoNaoCadastrado && (
+        <form onSubmit={cadastrarECadastrar} className="mt-2 flex flex-wrap items-end gap-2 rounded-md border border-border bg-muted/30 p-2.5">
+          <p className="w-full text-xs text-muted-foreground">
+            Local <span className="font-semibold text-card-foreground">"{codigoNaoCadastrado}"</span> não está
+            cadastrado. Cadastrar agora?
+          </p>
+          <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-card-foreground">
+            Rótulo (opcional)
+            <input
+              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+              type="text"
+              placeholder="Ex: Unidade 1, nível 1, esquerda"
+              value={rotuloNovo}
+              onChange={(e) => setRotuloNovo(e.target.value)}
+              autoFocus
+            />
+          </label>
+          <Botao type="submit" tamanho="sm" disabled={cadastrando}>
+            {cadastrando ? 'Cadastrando...' : 'Cadastrar e abrir'}
+          </Botao>
+          <Botao
+            type="button"
+            variante="fantasma"
+            tamanho="sm"
+            onClick={() => {
+              setCodigoNaoCadastrado(null)
+              setRotuloNovo('')
+            }}
+          >
+            Cancelar
+          </Botao>
+        </form>
+      )}
       {escaneando && <ScannerCodigoBarras onLido={handleLido} onFechar={() => setEscaneando(false)} />}
     </div>
   )

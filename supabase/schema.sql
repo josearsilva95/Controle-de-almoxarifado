@@ -305,9 +305,10 @@ create policy estoque_itens_delete_admin
 
 -- ============================================================
 -- estoque_locais: catálogo de endereços físicos do almoxarifado (ex: "01a"
--- = unidade 1, nível 1, lado esquerdo). Cadastrado pelo admin; a etiqueta
--- colada na prateleira usa esse mesmo código como valor do código de
--- barras — quem conta bipa a etiqueta pra marcar o "local ativo".
+-- = unidade 1, nível 1, lado esquerdo). Cadastrado pelo admin ou por quem
+-- está contando (equipe_estoque); a etiqueta colada na prateleira usa esse
+-- mesmo código como valor do código de barras — quem conta bipa a etiqueta
+-- pra marcar o "local ativo", cadastrando na hora se ainda não existir.
 -- ============================================================
 
 create table public.estoque_locais (
@@ -327,10 +328,16 @@ create policy estoque_locais_select_admin_ou_equipe
     or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
   );
 
-create policy estoque_locais_insert_admin
+-- Insert também liberado pra quem tem equipe_estoque (não só admin): quem
+-- está contando pode cadastrar uma prateleira nova na hora, ao bipar um
+-- código de etiqueta que ainda não existe no catálogo.
+create policy estoque_locais_insert_admin_ou_equipe
   on public.estoque_locais for insert
   to authenticated
-  with check (public.is_admin());
+  with check (
+    public.is_admin()
+    or coalesce((select equipe_estoque from public.profiles where id = auth.uid()), '') <> ''
+  );
 
 create policy estoque_locais_update_admin
   on public.estoque_locais for update
