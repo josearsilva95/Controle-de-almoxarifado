@@ -24,6 +24,13 @@ export interface Profile {
   created_at: string
 }
 
+export interface PedidoItem {
+  codigo: string | null
+  descricao: string
+  quantidade: number
+  unidade: string | null
+}
+
 export interface Pedido {
   id: string
   numero_pv: string
@@ -32,6 +39,7 @@ export interface Pedido {
   status: Status
   deposito: Deposito
   quantidade_itens: number
+  itens: PedidoItem[] | null
   motivo_pausa: MotivoPausa | null
   criado_por: string
   created_at: string

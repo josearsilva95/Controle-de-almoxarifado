@@ -43,6 +43,9 @@ export function PedidoCard({
 }: PedidoCardProps) {
   const souEuQueEstouTrabalhando = pedido.funcionario_atual === usuarioAtualId
   const podeSelecionar = modoSelecao && pedido.status === 'pendente' && onToggleSelecao
+  // Lista de materiais só é revelada depois que alguém aceita a requisição
+  // (status deixa de ser 'pendente') — antes disso só a contagem aparece.
+  const podeVerItens = pedido.status !== 'pendente' && pedido.itens && pedido.itens.length > 0
 
   return (
     <div
@@ -103,6 +106,26 @@ export function PedidoCard({
           </div>
         )}
       </div>
+      {podeVerItens && (
+        <div className="mb-3">
+          <div className="mb-1 text-xs font-semibold text-card-foreground">
+            Itens a separar ({pedido.itens!.length})
+          </div>
+          <ul className="space-y-1 rounded-md bg-muted/50 p-2.5 text-xs text-card-foreground">
+            {pedido.itens!.map((item, i) => (
+              <li key={i} className="flex justify-between gap-2">
+                <span>
+                  {item.codigo && <span className="text-muted-foreground">{item.codigo} · </span>}
+                  {item.descricao}
+                </span>
+                <span className="shrink-0 font-medium">
+                  {item.quantidade} {item.unidade ?? ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {!modoSelecao && (
         <div className="flex flex-wrap items-center gap-2">
           {pedido.status === 'pendente' && (

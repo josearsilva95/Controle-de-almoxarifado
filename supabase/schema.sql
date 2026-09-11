@@ -32,6 +32,10 @@ create table public.pedidos (
   numero_pv text not null,
   cliente text not null,
   quantidade_itens integer not null,
+  -- Lista descritiva dos materiais (código, descrição, quantidade, unidade) —
+  -- opcional; nula quando a requisição foi cadastrada só com a contagem
+  -- manual. Só é exibida ao funcionário depois que ele inicia a requisição.
+  itens jsonb,
   urgencia text not null check (urgencia in ('urgente', 'medio', 'nao_urgente')),
   status text not null default 'pendente' check (status in ('pendente', 'em_andamento', 'pausado', 'finalizado')),
   deposito text not null check (deposito in ('deposito_1', 'deposito_2', 'deposito_3')),
