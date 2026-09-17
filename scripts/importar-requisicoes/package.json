@@ -1,0 +1,15 @@
+{
+  "name": "importar-requisicoes",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "importar": "node rodar-uma-vez.mjs",
+    "watch": "node watch.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.0",
+    "dotenv": "^16.4.5",
+    "pdf-parse": "^2.4.5"
+  }
+}
