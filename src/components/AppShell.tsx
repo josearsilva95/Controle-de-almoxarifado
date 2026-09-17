@@ -7,6 +7,7 @@ import { iniciaisDoNome, rotuloRole } from '../lib/cores'
 import { podeAdministrar } from '../lib/permissoes'
 import { AlertasEmpilhadeira } from './AlertasEmpilhadeira'
 import { AlertaContagemCiclica } from './AlertaContagemCiclica'
+import { UsoBancoIndicador } from './UsoBancoIndicador'
 import { classesBotao, classesBotaoIcone } from './ui/Botao'
 import type { Profile } from '../types/database'
 
@@ -100,6 +101,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             )
           })}
         </nav>
+
+        {administra && <UsoBancoIndicador recolhida={recolhida} />}
 
         <button
           type="button"

@@ -132,6 +132,19 @@ as $$
   select deposito from public.profiles where id = auth.uid();
 $$;
 
+-- Tamanho atual do banco (bytes) — usado no menu admin pra acompanhar o uso
+-- contra o limite do plano Supabase. Só admin/líder geral vê (retorna null
+-- pros demais, sem erro, pra não precisar tratar exceção no front).
+create function public.tamanho_banco_bytes()
+returns bigint
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select case when public.is_admin() then pg_database_size(current_database()) end;
+$$;
+
 -- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
